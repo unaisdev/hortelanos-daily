@@ -1,0 +1,26 @@
+Daily Gold: software y contenido de terceros
+============================================
+
+Pokémon FireRed (the ROM in game/)
+  Built from pret/pokefirered (https://github.com/pret/pokefirered), a
+  decompilación comunitaria de Pokémon FireRed, con los cambios de Daily Gold.
+  Pokémon and all game content are © Nintendo, Creatures Inc. and GAME FREAK
+  inc. Este es un proyecto de fans gratuito y no oficial, sin afiliación ni
+  respaldo de esas compañías ni de The Pokémon Company.
+
+mGBA libretro core (vendor/mgba_libretro.js, vendor/mgba_libretro.wasm)
+  mGBA, de Vicki Pfau y colaboradores. Licencia Mozilla Public License 2.0:
+  https://github.com/mgba-emu/mgba
+  Compilado para el navegador como parte de RetroArch (GNU GPL v3):
+  https://github.com/libretro/RetroArch
+  Build used: https://github.com/arianrhodsandlot/retroarch-emscripten-build
+  (versión v1.22.2). El código fuente de estos binarios está disponible en
+  los enlaces anteriores.
+
+Nostalgist.js (vendor/nostalgist.js)
+  Licencia MIT; consulta vendor/nostalgist.LICENSE.txt
+  https://github.com/arianrhodsandlot/nostalgist
+
+Pixelify Sans (vendor/pixelify-sans.woff2)
+  Licencia SIL Open Font License 1.1; consulta vendor/pixelify-sans.OFL.txt
+  https://github.com/eifetx/Pixelify-Sans

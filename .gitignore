@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+.toolchain/
+pokefirered/
+dist/
+src-tauri/target/
+*.log
+.wrangler/
+.env
+.env.*
+games/*/rom/*.gba
+!games/dailygold/rom/dailyred.gba.gz

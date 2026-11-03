@@ -1,0 +1,151 @@
+:root {
+  --bg: #0a0e12;
+  --green: #5cff8a;
+  --green-dim: #2a8f4a;
+  --amber: #ffbf5c;
+  --red: #ff5c6c;
+  --muted: #6f8575;
+  --font: "Courier New", Courier, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--green);
+  font-family: var(--font);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at center, #122018 0%, #0a0e12 70%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15) 0px,
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+.shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 20px 64px;
+  min-height: 100vh;
+}
+
+.crt {
+  position: relative;
+  padding: 24px;
+  border: 2px solid var(--green-dim);
+  box-shadow: 0 0 40px rgba(92, 255, 138, 0.08) inset;
+  min-height: 320px;
+}
+
+.boot-log {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 6px rgba(92, 255, 138, 0.45);
+}
+
+.boot-hint {
+  margin: 28px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.menu-head { margin-bottom: 28px; }
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--amber);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+}
+
+.brand {
+  margin: 0;
+  font-size: clamp(28px, 6vw, 44px);
+  letter-spacing: 0.04em;
+  text-shadow: 2px 2px 0 #000, 0 0 12px rgba(92, 255, 138, 0.35);
+}
+
+.tagline {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.game-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  padding: 14px 16px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.game-item[aria-selected="true"] {
+  border-color: var(--green);
+  background: rgba(42, 143, 74, 0.18);
+  box-shadow: 0 0 0 1px var(--green-dim);
+}
+
+.game-item.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.game-item .cursor {
+  color: var(--amber);
+  width: 1.2em;
+}
+
+.game-item .name {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+}
+
+.game-item .blurb {
+  margin: 0;
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.game-item .meta {
+  grid-column: 2;
+  margin: 0;
+  font-size: 11px;
+  color: var(--green-dim);
+}
+
+.menu-help, .menu-status {
+  margin: 20px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.menu-status { color: var(--red); min-height: 1.2em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-log { text-shadow: none; }
+}

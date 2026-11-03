@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "launcher": {
+    "id": "hortelanos-daily",
+    "name": "Hortelano's Daily",
+    "version": "0.1.0",
+    "minProtocolAdapters": ["dailyred-conf-v2+status-v1"]
+  },
+  "games": [
+    {
+      "id": "dailygold",
+      "name": "Daily Gold",
+      "boss": "GOLD",
+      "blurb": "Un combate al día contra GOLD en la sala del Campeón.",
+      "contentVersion": "0.1.0",
+      "protocolId": "dailyred-conf-v2+status-v1",
+      "packPath": "games/dailygold",
+      "content": {
+        "repo": "unaisdev/dailygold",
+        "asset": "dailygold-content.zip",
+        "tagPrefix": "content-v"
+      }
+    },
+    {
+      "id": "dailyred",
+      "name": "Daily Red",
+      "boss": "RED",
+      "blurb": "Un combate al día contra RED. Requiere content pack (la ROM no vive en el repo fuente).",
+      "contentVersion": "0.0.0",
+      "protocolId": "dailyred-conf-v2+status-v1",
+      "packPath": "games/dailyred",
+      "content": {
+        "repo": "amoi-builds/dailyred",
+        "asset": "dailyred-content.zip",
+        "tagPrefix": "content-v"
+      }
+    }
+  ]
+}

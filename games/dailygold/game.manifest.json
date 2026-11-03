@@ -1,0 +1,24 @@
+{
+  "id": "dailygold",
+  "name": "Daily Gold",
+  "contentVersion": "0.1.0",
+  "protocolId": "dailyred-conf-v2+status-v1",
+  "rom": {
+    "path": "rom/dailyred.gba.gz",
+    "configMagic": "DAILYRED-CONF-V2",
+    "statusMagic": "DAILYRED-STATUS1",
+    "configLayout": "seed_u32,wins_u16,battles_u16,daily_u8",
+    "statusLayout": "magic16,seed_u32,phase_u8,result_u8"
+  },
+  "client": {
+    "statsKey": "hortelano:dailygold:stats",
+    "seedPrefix": "dailyoro:",
+    "bossLabel": "GOLD",
+    "titleAsset": "assets/gold.png",
+    "mutedKey": "hortelano:dailygold:muted"
+  },
+  "compat": {
+    "minLauncherVersion": "0.1.0",
+    "runnerAdapters": ["dailyred-conf-v2+status-v1"]
+  }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hortelano's Daily</title>
+  <meta name="description" content="Launcher retro de los play-daily: Daily Gold, Daily Red y más.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main class="shell" data-screen="boot" id="shell">
+    <section class="crt" id="boot" aria-live="polite">
+      <pre class="boot-log" id="boot-log"></pre>
+      <p class="boot-hint">Pulsa Enter o haz clic para saltar</p>
+    </section>
+
+    <section class="menu" id="menu" hidden>
+      <header class="menu-head">
+        <p class="eyebrow">CARTRIDGE SELECT</p>
+        <h1 class="brand">HORTELANO'S DAILY</h1>
+        <p class="tagline">Todos los play-daily en un solo sitio.</p>
+      </header>
+      <ul class="game-list" id="game-list" role="listbox" aria-label="Juegos"></ul>
+      <p class="menu-help">↑ ↓ elegir · Enter jugar · Esc intro</p>
+      <p class="menu-status" id="menu-status" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>

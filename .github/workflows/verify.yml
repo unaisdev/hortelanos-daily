@@ -1,0 +1,17 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify dailygold protocol + ROM magic
+        run: |
+          chmod +x scripts/verify-protocol.sh
+          scripts/verify-protocol.sh games/dailygold
+          scripts/verify-protocol.sh games/dailyred
