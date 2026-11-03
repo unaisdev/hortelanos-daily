@@ -14,8 +14,7 @@ node scripts/serve.mjs
 ```
 
 - Intro retro en `/shell/`
-- Daily Gold viene con pack local (`games/dailygold`, ROM incluida para desarrollo)
-- Daily Red aparece en el menú pero **espera content pack** (el repo fuente no publica la ROM)
+- Daily Gold y Daily Red vienen con pack local (`games/dailygold`, `games/dailyred`; ROM incluida)
 
 ```sh
 chmod +x scripts/verify-protocol.sh
@@ -40,10 +39,20 @@ Ver [docs/PROTOCOL.md](docs/PROTOCOL.md). Hoy: `dailyred-conf-v2+status-v1`.
 
 Orden al cambiar el contrato: **adapter en launcher → Release launcher → content pack**.
 
-## Escritorio / Releases
+## Escritorio (Tauri 2)
 
-- Builds unsigned por plataforma (macOS / Windows / Ubuntu). Guía: [docs/UNSIGNED_INSTALL.md](docs/UNSIGNED_INSTALL.md).
-- Updates previstos vía GitHub Releases (launcher + `*-content.zip` por juego).
+Necesitas Rust (`rustup`) además de Node:
+
+```sh
+npm install
+npm run desktop:dev     # ventana nativa
+npm run desktop:build   # instaladores en src-tauri/target/release/bundle/
+```
+
+- Builds **unsigned** por plataforma (macOS / Windows / Ubuntu). Guía: [docs/UNSIGNED_INSTALL.md](docs/UNSIGNED_INSTALL.md).
+- Updates vía GitHub Releases: launcher (`v*`) + content packs (`content-v*` en cada repo de juego).
+- En el menú desktop: **U** busca/aplica updates de packs (SHA-256).
+- Detalle Rust/IPC: [src-tauri/README.md](src-tauri/README.md).
 
 ## Licencias
 

@@ -28,7 +28,14 @@ const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     let rel = decodeURIComponent(url.pathname);
-    if (rel === '/') rel = '/shell/index.html';
+
+    // Keep the URL under /shell/ so relative assets (app.js, style.css) resolve.
+    if (rel === '/' || rel === '') {
+      res.writeHead(302, { Location: '/shell/', 'Cache-Control': 'no-cache' });
+      res.end();
+      return;
+    }
+
     let path = normalize(join(root, rel));
     if (!path.startsWith(root)) throw Object.assign(new Error('forbidden'), { code: 'EACCES' });
     let st = await stat(path);
@@ -56,5 +63,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`Hortelano's Daily → http://localhost:${server.address().port}/`);
+  console.log(`Hortelano's Daily → http://localhost:${server.address().port}/shell/`);
 });

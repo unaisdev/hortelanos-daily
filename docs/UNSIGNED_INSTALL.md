@@ -21,10 +21,23 @@ Hortelano's Daily se distribuye **sin firma de código**. El sistema operativo a
 2. Si usas `.deb`, instálalo con tu gestor de paquetes de confianza.
 3. Verifica SHA-256.
 
-## Desarrollo web (sin instalador)
+## Desarrollo
 
 ```sh
+# Solo navegador
 node scripts/serve.mjs
+
+# App desktop (Rust + WebView)
+npm install
+npm run desktop:dev
 ```
 
-Abre la URL impresa (por defecto http://localhost:8787).
+Abre la URL impresa del servidor web (por defecto http://localhost:8787) o la ventana Tauri.
+
+## Verificar un instalador
+
+Compara el hash del archivo descargado con `SHA256SUMS` del mismo Release:
+
+```sh
+shasum -a 256 "Hortelanos Daily.app"   # o el .dmg / .exe / .AppImage
+```

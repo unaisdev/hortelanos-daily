@@ -1,0 +1,21 @@
+{
+  "name": "hortelanos-daily",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hortelano's Daily — launcher de play-daily (Gold, Red, …)",
+  "type": "module",
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "tauri": "tauri",
+    "prepare:desktop-www": "node scripts/prepare-desktop-www.mjs",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "verify": "scripts/verify-protocol.sh games/dailygold && scripts/verify-protocol.sh games/dailyred"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.4"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.8.4"
+  }
+}

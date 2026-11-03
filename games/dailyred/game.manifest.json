@@ -1,7 +1,7 @@
 {
   "id": "dailyred",
   "name": "Daily Red",
-  "contentVersion": "0.0.0",
+  "contentVersion": "0.1.0",
   "protocolId": "dailyred-conf-v2+status-v1",
   "rom": {
     "path": "rom/dailyred.gba.gz",
@@ -14,15 +14,11 @@
     "statsKey": "hortelano:dailyred:stats",
     "seedPrefix": "dailyred:",
     "bossLabel": "RED",
-    "titleAsset": "assets/red.svg",
+    "titleAsset": "assets/red.png",
     "mutedKey": "hortelano:dailyred:muted"
   },
   "compat": {
     "minLauncherVersion": "0.1.0",
-    "runnerAdapters": [
-      "dailyred-conf-v2+status-v1"
-    ]
-  },
-  "status": "awaiting-content-pack",
-  "notes": "amoi-builds/dailyred no publica la ROM en el repo. Genera el pack con scripts/package-content.sh tras build-rom.sh en ese proyecto."
+    "runnerAdapters": ["dailyred-conf-v2+status-v1"]
+  }
 }
