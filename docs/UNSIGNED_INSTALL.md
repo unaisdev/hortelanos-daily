@@ -14,8 +14,9 @@ Hortelano's Daily se distribuye **sin firma de código**. El sistema operativo a
 **Recomendado — portable (sin instalar):**
 1. Descarga `Hortelanos.Daily_*-x64-portable.zip`.
 2. Descomprime en una carpeta (por ejemplo Escritorio).
-3. Ejecuta `Hortelanos Daily.exe` **dejando junto a él la carpeta `resources/`**.
+3. Ejecuta `Hortelanos Daily.exe` **dejando en la misma carpeta** `shell/`, `runner/`, `catalog/` y `games/` (no muevas solo el `.exe`).
 4. Si aparece SmartScreen: **Más información** → **Ejecutar de todas formas**.
+5. Si la ventana dice `Not found`, el zip está incompleto o faltan esas carpetas junto al exe.
 
 **Instalador (opcional):**
 1. Ejecuta el `-setup.exe` o `.msi`.
