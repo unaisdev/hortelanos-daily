@@ -33,7 +33,7 @@ const ui = {
 
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game') || sessionStorage.getItem('hortelano:selected-game');
-if (!gameId) location.replace('../shell/');
+if (!gameId) location.replace('../shell/?from=game');
 
 const session = {
   get(key) { try { return sessionStorage.getItem(key); } catch { return null; } },

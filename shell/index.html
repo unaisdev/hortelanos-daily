@@ -6,11 +6,98 @@
   <title>Hortelano's Daily</title>
   <meta name="description" content="Launcher retro de los play-daily: Daily Gold, Daily Red y más.">
   <meta name="color-scheme" content="dark">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/pokeball.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
 <body>
+  <div class="world" aria-hidden="true">
+    <video
+      class="world-loop"
+      autoplay
+      muted
+      loop
+      playsinline
+      poster="assets/bg/emerald-intro-poster.jpg?v=3"
+    >
+      <source src="assets/bg/emerald-intro.webm?v=3" type="video/webm">
+      <source src="assets/bg/emerald-intro.mp4?v=3" type="video/mp4">
+    </video>
+    <div class="world-veil"></div>
+  </div>
+
+  <div class="update-bar" id="update-bar" hidden>
+    <span>Desktop</span>
+    <button type="button" class="update-btn" id="update-btn" hidden>Actualizar</button>
+  </div>
+  <button type="button" class="help-fab" id="help-fab" hidden aria-label="Ver controles" aria-haspopup="dialog" aria-controls="help-modal">
+    <span aria-hidden="true">i</span>
+  </button>
+
+  <aside class="menu-help" id="menu-help" hidden aria-label="Controles">
+    <div class="help-row">
+      <span class="help-keys">
+        <kbd class="key">←</kbd>
+        <kbd class="key">→</kbd>
+      </span>
+      <span class="help-label">elegir</span>
+    </div>
+    <div class="help-row">
+      <span class="help-keys">
+        <kbd class="key key-wide">Enter</kbd>
+      </span>
+      <span class="help-label">jugar</span>
+    </div>
+    <div class="help-row">
+      <span class="help-keys">
+        <kbd class="key key-wide">Esc</kbd>
+      </span>
+      <span class="help-label">intro</span>
+    </div>
+    <div class="help-row">
+      <span class="help-keys">
+        <kbd class="key">U</kbd>
+      </span>
+      <span class="help-label">updates</span>
+    </div>
+  </aside>
+
+  <dialog class="help-modal" id="help-modal" aria-labelledby="help-modal-title">
+    <div class="help-modal-card">
+      <header class="help-modal-head">
+        <h2 id="help-modal-title">Controles</h2>
+        <button type="button" class="help-modal-close" id="help-modal-close" aria-label="Cerrar">×</button>
+      </header>
+      <div class="help-modal-body">
+        <div class="help-row">
+          <span class="help-keys">
+            <kbd class="key">←</kbd>
+            <kbd class="key">→</kbd>
+          </span>
+          <span class="help-label">elegir</span>
+        </div>
+        <div class="help-row">
+          <span class="help-keys">
+            <kbd class="key key-wide">Enter</kbd>
+          </span>
+          <span class="help-label">jugar</span>
+        </div>
+        <div class="help-row">
+          <span class="help-keys">
+            <kbd class="key key-wide">Esc</kbd>
+          </span>
+          <span class="help-label">intro</span>
+        </div>
+        <div class="help-row">
+          <span class="help-keys">
+            <kbd class="key">U</kbd>
+          </span>
+          <span class="help-label">updates</span>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <main class="shell" data-screen="boot" id="shell">
     <section class="crt" id="boot" aria-live="polite">
       <pre class="boot-log" id="boot-log"></pre>
@@ -18,18 +105,65 @@
     </section>
 
     <section class="menu" id="menu" hidden>
-      <header class="menu-head">
-        <p class="eyebrow">CARTRIDGE SELECT</p>
-        <h1 class="brand">HORTELANO'S DAILY</h1>
-        <p class="tagline">Todos los play-daily en un solo sitio.</p>
-      </header>
-      <ul class="game-list" id="game-list" role="listbox" aria-label="Juegos"></ul>
-      <p class="menu-help">↑ ↓ elegir · Enter jugar · Esc intro · U updates (desktop)</p>
-      <div class="update-bar" id="update-bar" hidden>
-        <span>Desktop</span>
-        <button type="button" class="update-btn" id="update-btn" hidden>Actualizar</button>
+      <div class="menu-layout">
+        <header class="menu-head">
+          <p class="eyebrow">CARTRIDGE SELECT</p>
+          <div class="brand-row">
+            <img class="brand-logo" src="assets/logo-hortelano.jpeg" width="320" height="320" alt="El Hortelano">
+            <div class="brand-socials">
+              <p class="socials-hint">Sígueme en mis redes</p>
+              <nav class="socials" aria-label="Redes de Hortelano">
+                <a class="social" href="https://www.youtube.com/@elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="YouTube @elhortelanoo">
+                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.5 31.5 0 0 0 0 12a31.5 31.5 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.5 31.5 0 0 0 24 12a31.5 31.5 0 0 0-.5-5.8zM9.8 15.5v-7l6.3 3.5-6.3 3.5z"/></svg>
+                  <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en YouTube</em></span>
+                </a>
+                <a class="social" href="https://www.instagram.com/elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="Instagram @elhortelanoo">
+                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-3.3-.1-4.8-1.7-4.9-4.9-.1-1.3-.1-1.7-.1-4.9s0-3.6.1-4.9C2.3 4 3.9 2.4 7.1 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.2 0-3.5 0-4.8.1-2.2.1-3.3 1.2-3.3 3.3-.1 1.2-.1 1.6-.1 4.7s0 3.5.1 4.7c.1 2.2 1.2 3.2 3.3 3.3 1.3.1 1.6.1 4.8.1s3.5 0 4.7-.1c2.2-.1 3.3-1.2 3.4-3.3.1-1.2.1-1.6.1-4.7s0-3.5-.1-4.7c-.1-2.2-1.2-3.2-3.4-3.3-1.2-.1-1.5-.1-4.7-.1zm0 3.2a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.3-8.4a1.2 1.2 0 1 1-2.3 0 1.2 1.2 0 0 1 2.3 0z"/></svg>
+                  <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en Instagram</em></span>
+                </a>
+                <a class="social" href="https://www.tiktok.com/@elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="TikTok @elhortelanoo">
+                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M21 8.2a7.4 7.4 0 0 1-4.3-1.4v7.3a6.1 6.1 0 1 1-5.2-6v3.1a3 3 0 1 0 2.1 2.9V2.1h3a4.4 4.4 0 0 0 4.4 4.4V8.2z"/></svg>
+                  <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en TikTok</em></span>
+                </a>
+                <a class="social" href="https://x.com/elhortelanooo" target="_blank" rel="noopener noreferrer" aria-label="Twitter @elhortelanooo">
+                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M18.2 2H21l-6.6 7.5L22 22h-6.2l-4.9-6.4L5.3 22H2.5l7-8L2 2h6.3l4.4 5.8L18.2 2zm-1.1 18h1.7L7 3.9H5.2L17.1 20z"/></svg>
+                  <span class="social-tip"><strong>@elhortelanooo</strong><em>Sígueme en Twitter</em></span>
+                </a>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        <div class="select-stage">
+          <p class="tagline">Todos los play-daily en un solo sitio.</p>
+          <article class="select-display" id="select-display" aria-live="polite">
+            <div class="display-card">
+              <p class="display-kicker">SELECCIONADO</p>
+              <h2 class="display-name" id="display-name">—</h2>
+              <p class="display-boss" id="display-boss"></p>
+            </div>
+            <div class="display-copy">
+              <p class="display-blurb" id="display-blurb"></p>
+              <p class="display-meta" id="display-meta"></p>
+            </div>
+          </article>
+
+          <ul class="trainer-rail" id="game-list" role="listbox" aria-label="Entrenadores"></ul>
+        </div>
       </div>
+
       <p class="menu-status" id="menu-status" role="status"></p>
+      <footer class="site-foot">
+        <p class="love">Hecho con todo el corazón por Hortelano</p>
+        <p class="dev-credit">
+          Desarrollado por
+          <a href="https://github.com/unaisdev" target="_blank" rel="noopener noreferrer">unaisdev</a>
+        </p>
+        <p class="credits">
+          © 2026 El Hortelano · Fan project — not Nintendo.
+          Emerald opening used as backdrop.
+        </p>
+      </footer>
     </section>
   </main>
 </body>

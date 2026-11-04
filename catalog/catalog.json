@@ -11,10 +11,16 @@
       "id": "dailygold",
       "name": "Daily Gold",
       "boss": "GOLD",
-      "blurb": "Un combate al día contra GOLD en la sala del Campeón.",
+      "blurb": "Un combate al día contra GOLD.",
       "contentVersion": "0.1.0",
       "protocolId": "dailyred-conf-v2+status-v1",
       "packPath": "games/dailygold",
+      "menu": {
+        "accent": "#f0c050",
+        "sprite": "assets/trainers/gold.png?v=2",
+        "spriteStatic": "assets/trainers/gold.png?v=2",
+        "mascot": "GOLD (Ethan)"
+      },
       "content": {
         "repo": "unaisdev/dailygold",
         "asset": "dailygold-content.zip",
@@ -29,6 +35,12 @@
       "contentVersion": "0.1.0",
       "protocolId": "dailyred-conf-v2+status-v1",
       "packPath": "games/dailyred",
+      "menu": {
+        "accent": "#e85d5d",
+        "sprite": "assets/trainers/red.png?v=2",
+        "spriteStatic": "assets/trainers/red.png?v=2",
+        "mascot": "RED"
+      },
       "content": {
         "repo": "amoi-builds/dailyred",
         "asset": "dailyred-content.zip",

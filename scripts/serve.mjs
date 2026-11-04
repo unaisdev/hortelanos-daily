@@ -18,8 +18,13 @@ const types = {
   '.gba': 'application/octet-stream',
   '.gz': 'application/gzip',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.woff2': 'font/woff2',
+  '.webm': 'video/webm',
+  '.mp4': 'video/mp4',
   '.md': 'text/markdown; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
 };
