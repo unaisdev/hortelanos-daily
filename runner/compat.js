@@ -48,7 +48,7 @@ export function checkGameCompat(manifest) {
       ok: false,
       code: 'no-content',
       message: manifest.notes
-        || 'Falta el content pack (ROM). Publícalo desde el repo del juego vía GitHub Releases.',
+        || 'Sin ROM local. Descárgala con U o publícala desde el repo del juego vía GitHub Releases.',
     };
   }
   return { ok: true };

@@ -29,9 +29,10 @@ const displayName = document.getElementById('display-name');
 const displayBoss = document.getElementById('display-boss');
 const displayBlurb = document.getElementById('display-blurb');
 const displayMeta = document.getElementById('display-meta');
+const displayRepo = document.getElementById('display-repo');
 
 const LINES = [
-  'HORTELANO BIOS v0.1',
+  'HORTELANO BIOS v1.0',
   'Copyright (C) Fan Project — not Nintendo',
   '',
   'Memory check .......... OK',
@@ -131,11 +132,11 @@ async function loadCatalogFromFetch() {
       if (!mRes.ok) throw new Error('manifest ausente');
       manifest = await mRes.json();
       if (manifest.status === 'awaiting-content-pack') {
-        reason = 'sin content pack / ROM';
+        reason = 'Sin ROM local';
       } else {
         const romRes = await fetch(`../${entry.packPath}/${manifest.rom.path}`, { method: 'HEAD' });
         playable = romRes.ok;
-        if (!playable) reason = 'ROM no encontrada';
+        if (!playable) reason = 'Sin ROM local';
       }
     } catch (err) {
       reason = errorText(err) || 'pack inválido';
@@ -217,18 +218,53 @@ function spriteFor(game) {
   return { animated, fallback, accent: menu.accent || '#5cff8a', mascot: menu.mascot || game.boss || '' };
 }
 
+function isGithubPack(game) {
+  // Only when the pack was actually installed from GitHub Releases.
+  return game?.source === 'github';
+}
+
+function repoUrlFor(game) {
+  const repo = game?.content?.repo;
+  if (!repo || typeof repo !== 'string') return '';
+  return `https://github.com/${repo}`;
+}
+
+const GITHUB_ICON_SVG =
+  '<svg class="gh-icon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 0 1 8 4.07c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>';
+
 function renderDisplay() {
   const game = games[selected];
   if (!game || !displayName) return;
   const spr = spriteFor(game);
   const upd = contentUpdates.find((u) => u.gameId === game.id && u.updateAvailable);
   const updLabel = upd ? ` · update ${upd.remoteVersion || '?'}` : '';
+  const fromGh = isGithubPack(game);
+  const repoUrl = repoUrlFor(game);
   displayName.textContent = game.name;
   displayBoss.textContent = `VS ${game.boss || spr.mascot || '?'}`;
   displayBlurb.textContent = game.blurb || '';
-  displayMeta.textContent = game.playable
-    ? `protocol ${game.protocolId} · content ${game.contentVersion}${updLabel}`
-    : `${game.reason || 'No disponible'}${updLabel}`;
+  if (game.playable) {
+    displayMeta.textContent = fromGh
+      ? `GitHub · content ${game.contentVersion}${updLabel}`
+      : `protocol ${game.protocolId} · content ${game.contentVersion}${updLabel}`;
+  } else {
+    displayMeta.textContent = `${game.reason || 'No disponible'}${updLabel}`;
+  }
+  displayMeta.classList.toggle('from-github', fromGh);
+
+  if (displayRepo) {
+    const repoPath = game?.content?.repo ? `/${game.content.repo}` : '';
+    if (repoUrl && repoPath) {
+      displayRepo.hidden = false;
+      displayRepo.href = repoUrl;
+      displayRepo.innerHTML = `${GITHUB_ICON_SVG}<span>${repoPath}</span>`;
+      displayRepo.setAttribute('aria-label', `Repo de ${game.name}: ${repoUrl}`);
+    } else {
+      displayRepo.hidden = true;
+      displayRepo.removeAttribute('href');
+      displayRepo.innerHTML = '';
+    }
+  }
 }
 
 function renderList() {
@@ -245,10 +281,14 @@ function renderList() {
     const spr = spriteFor(game);
     const src = spr.animated || spr.fallback;
     const srcStatic = spr.fallback || spr.animated;
+    const ghBadge = isGithubPack(game)
+      ? `<span class="pack-gh" title="Content pack de GitHub" aria-label="pack de GitHub">${GITHUB_ICON_SVG}</span>`
+      : '';
     li.innerHTML = `
       <span class="cursor" aria-hidden="true">${isSel ? '<img class="cursor-ball" src="assets/sprites/poke-ball.png?v=3" width="28" height="28" alt="">' : ''}</span>
       <div class="sprite-wrap">
         <img class="sprite" src="${src}" data-static="${srcStatic}" alt="">
+        ${ghBadge}
       </div>
       <span class="slot-label">${game.boss || spr.mascot || game.name}</span>
     `;
@@ -277,7 +317,7 @@ function launchSelected() {
   if (!game.playable) {
     const upd = contentUpdates.find((u) => u.gameId === game.id && u.downloadUrl);
     if (upd) {
-      menuStatus.textContent = `${game.name}: sin ROM local. Pulsa U para descargar el content pack.`;
+      menuStatus.textContent = `${game.name}: Sin ROM local. Pulsa U para descargar el content pack.`;
       return;
     }
     menuStatus.textContent = `${game.name}: ${game.reason}. Ver docs/PROTOCOL.md y Releases del repo fuente.`;
@@ -495,6 +535,20 @@ if (updateBtn) {
 if (updateLauncherBtn) {
   updateLauncherBtn.addEventListener('click', () => {
     openLauncherRelease();
+  });
+}
+
+if (displayRepo) {
+  displayRepo.addEventListener('click', async (event) => {
+    const url = displayRepo.href;
+    if (!url || displayRepo.hidden) return;
+    if (!isDesktop()) return;
+    event.preventDefault();
+    try {
+      await openExternalUrl(url);
+    } catch {
+      window.open(url, '_blank', 'noopener');
+    }
   });
 }
 

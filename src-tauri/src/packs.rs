@@ -70,10 +70,36 @@ pub fn read_catalog(app: &AppHandle) -> AppResult<Catalog> {
     Ok(serde_json::from_str(&raw)?)
 }
 
+/// Sidecar written next to an installed pack so the UI can tell GitHub downloads
+/// apart from the copy seeded from the launcher bundle.
+pub const PACK_ORIGIN_FILE: &str = ".pack-origin";
+
+pub fn write_pack_origin(pack_dir: &std::path::Path, origin: &str) -> AppResult<()> {
+    fs::write(pack_dir.join(PACK_ORIGIN_FILE), origin)?;
+    Ok(())
+}
+
+fn read_pack_origin(pack_dir: &std::path::Path) -> Option<String> {
+    fs::read_to_string(pack_dir.join(PACK_ORIGIN_FILE))
+        .ok()
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| !s.is_empty())
+}
+
+/// Classify where the active pack came from.
+/// - `github` — installed via Releases download (explicit `.pack-origin`)
+/// - `bundled` — shipped with / seeded from the launcher
+/// - `app-data` — overlay present without a known origin marker (legacy)
+/// - `missing` — no pack on disk
 pub fn resolve_pack_dir(app: &AppHandle, game: &CatalogGame) -> AppResult<(PathBuf, &'static str)> {
     let overlay = paths::game_data_dir(app, &game.id)?;
     if overlay.join("game.manifest.json").is_file() {
-        return Ok((overlay, "app-data"));
+        let source = match read_pack_origin(&overlay).as_deref() {
+            Some("github") => "github",
+            Some("bundled") => "bundled",
+            _ => "app-data",
+        };
+        return Ok((overlay, source));
     }
     let bundled = paths::static_root(app)?.join(&game.pack_path);
     if bundled.join("game.manifest.json").is_file() {
@@ -90,7 +116,7 @@ pub fn inspect_pack(app: &AppHandle, game: &CatalogGame) -> AppResult<PackStatus
             id: game.id.clone(),
             name: game.name.clone(),
             playable: false,
-            reason: "sin content pack / manifest".into(),
+            reason: "Sin ROM local / manifest".into(),
             content_version: "0.0.0".into(),
             protocol_id: game.protocol_id.clone(),
             source: source.into(),
@@ -118,7 +144,7 @@ pub fn inspect_pack(app: &AppHandle, game: &CatalogGame) -> AppResult<PackStatus
             id: game.id.clone(),
             name: game.name.clone(),
             playable: false,
-            reason: "sin content pack / ROM".into(),
+            reason: "Sin ROM local".into(),
             content_version,
             protocol_id,
             source: source.into(),
@@ -138,7 +164,7 @@ pub fn inspect_pack(app: &AppHandle, game: &CatalogGame) -> AppResult<PackStatus
     let reason = if playable {
         String::new()
     } else {
-        format!("ROM no encontrada ({rom_rel})")
+        format!("Sin ROM local ({rom_rel})")
     };
 
     Ok(PackStatus {
