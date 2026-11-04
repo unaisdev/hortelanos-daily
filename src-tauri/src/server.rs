@@ -67,7 +67,12 @@ fn handle(request: Request, roots: &StaticRoots) -> AppResult<()> {
             }
         }
         None => {
-            let response = Response::from_string("Not found").with_status_code(StatusCode(404));
+            let hint = if rel.is_empty() || rel == "shell" || rel.starts_with("shell/") {
+                "Not found — missing shell/ next to the app (portable zip incomplete?)."
+            } else {
+                "Not found"
+            };
+            let response = Response::from_string(hint).with_status_code(StatusCode(404));
             let _ = request.respond(response);
         }
     }

@@ -27,8 +27,11 @@
   </div>
 
   <div class="update-bar" id="update-bar" hidden>
-    <span>Desktop</span>
-    <button type="button" class="update-btn" id="update-btn" hidden>Actualizar</button>
+    <span class="update-status" id="update-status">Desktop</span>
+    <button type="button" class="update-btn" id="update-btn" hidden>Descargar packs</button>
+    <button type="button" class="update-btn update-btn-launcher" id="update-launcher-btn" hidden>
+      Abrir release launcher
+    </button>
   </div>
   <button type="button" class="help-fab" id="help-fab" hidden aria-label="Ver controles" aria-haspopup="dialog" aria-controls="help-modal">
     <span aria-hidden="true">i</span>
@@ -58,7 +61,7 @@
       <span class="help-keys">
         <kbd class="key">U</kbd>
       </span>
-      <span class="help-label">updates</span>
+      <span class="help-label">packs</span>
     </div>
   </aside>
 
@@ -92,7 +95,7 @@
           <span class="help-keys">
             <kbd class="key">U</kbd>
           </span>
-          <span class="help-label">updates</span>
+          <span class="help-label">packs</span>
         </div>
       </div>
     </div>

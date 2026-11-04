@@ -76,47 +76,56 @@ jobs:
           RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
         run: |
           $ErrorActionPreference = 'Stop'
+          # On Windows, Tauri resource_dir() is the folder that contains the exe.
+          # Assets (shell/, runner/, …) must sit next to Hortelanos Daily.exe — NOT under resources/.
           $stage = "portable/Hortelanos Daily"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
           $exe = Get-ChildItem "src-tauri/target/release/*.exe" |
             Where-Object { $_.Name -notlike '*setup*' -and $_.Name -notlike '*uninstall*' } |
             Select-Object -First 1
           if (-not $exe) { throw "No release exe found under src-tauri/target/release" }
-
           Copy-Item $exe.FullName -Destination (Join-Path $stage "Hortelanos Daily.exe")
 
-          $resCandidates = @(
-            "src-tauri/target/release/resources",
-            "src-tauri/target/release/hortelanos-daily_resources",
-            "src-tauri/target/release/Hortelanos Daily_resources"
+          # Prefer files Tauri already staged next to the release binary.
+          $assetRoots = @(
+            "src-tauri/target/release",
+            "desktop-www"
           )
-          $copiedRes = $false
-          foreach ($res in $resCandidates) {
-            if (Test-Path $res) {
-              Copy-Item $res -Destination (Join-Path $stage "resources") -Recurse -Force
-              $copiedRes = $true
-              break
-            }
-          }
-          # Fallback: copy bundled static trees next to the exe
-          if (-not $copiedRes) {
-            $resDir = Join-Path $stage "resources"
-            New-Item -ItemType Directory -Force -Path $resDir | Out-Null
-            foreach ($name in @('shell','runner','catalog','games','docs','index.html')) {
-              $src = Join-Path "desktop-www" $name
+          $required = @('shell','runner','catalog','games')
+          $optional = @('docs','index.html')
+          $copied = @{}
+          foreach ($root in $assetRoots) {
+            foreach ($name in ($required + $optional)) {
+              if ($copied.ContainsKey($name)) { continue }
+              $src = Join-Path $root $name
               if (Test-Path $src) {
-                Copy-Item $src -Destination (Join-Path $resDir $name) -Recurse -Force
+                Copy-Item $src -Destination (Join-Path $stage $name) -Recurse -Force
+                $copied[$name] = $true
               }
             }
           }
+          foreach ($name in $required) {
+            if (-not $copied.ContainsKey($name)) {
+              throw "Portable pack missing required asset '$name' (looked in target/release and desktop-www)"
+            }
+          }
+          $shellIndex = Join-Path $stage "shell/index.html"
+          if (-not (Test-Path $shellIndex)) {
+            throw "Portable pack incomplete: shell/index.html missing"
+          }
+
+          # Sidecar DLLs if present (WebView2 loader, etc.)
+          Get-ChildItem "src-tauri/target/release/*.dll" -ErrorAction SilentlyContinue |
+            ForEach-Object { Copy-Item $_.FullName -Destination (Join-Path $stage $_.Name) -Force }
 
           $readme = @(
             "Hortelano's Daily - Windows portable",
             "====================================",
             "1. Unzip this folder anywhere.",
             "2. Run Hortelanos Daily.exe.",
-            "3. Keep the resources/ folder next to the exe.",
+            "3. Keep shell/, runner/, catalog/, games/ next to the exe (same folder).",
             "4. Needs Microsoft Edge WebView2 (usually already on Windows 10/11).",
             "5. Unsigned build: SmartScreen -> More info -> Run anyway."
           ) -join "`n"
@@ -126,6 +135,14 @@ jobs:
           $zip = "Hortelanos.Daily_${ver}_x64-portable.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path $stage -DestinationPath $zip -Force
+
+          # Sanity: zip must include shell + runner, not just the exe
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $entries = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip)).Entries.FullName
+          if (-not ($entries | Where-Object { $_ -match 'shell[/\\]index\.html$' })) {
+            throw "Portable ZIP missing shell/index.html"
+          }
+          Write-Host "Portable entries: $($entries.Count)"
           gh release upload "$env:RELEASE_TAG" $zip --clobber
 
   checksums:

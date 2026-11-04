@@ -617,6 +617,18 @@ body {
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
 }
 
+.update-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.update-bar[data-launcher-update='1'] {
+  color: #1a1200;
+  background: rgba(255, 186, 72, 0.95);
+  border-color: #a05a00;
+}
+
 .update-btn {
   font: inherit;
   color: #102418;
@@ -625,6 +637,13 @@ body {
   padding: 6px 12px;
   cursor: pointer;
   border-radius: 4px;
+  white-space: nowrap;
+}
+
+.update-btn-launcher {
+  background: #102418;
+  color: #fff8e7;
+  border-color: #102418;
 }
 
 .update-btn:disabled {

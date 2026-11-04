@@ -52,7 +52,7 @@ npm run desktop:build   # instaladores en src-tauri/target/release/bundle/
 - Builds **unsigned** por plataforma (macOS / Windows / Ubuntu). Guía: [docs/UNSIGNED_INSTALL.md](docs/UNSIGNED_INSTALL.md).
 - En Windows hay **portable** (`*-x64-portable.zip`: descomprimir y ejecutar, sin instalador) además del setup.
 - Updates vía GitHub Releases: launcher (`v*`) + content packs (`content-v*` en cada repo de juego).
-- En el menú desktop: **U** busca/aplica updates de packs (SHA-256).
+- En el menú desktop: al abrir comprueba Releases y **auto-instala** content packs nuevos; **U** reintenta packs. Si hay launcher nuevo, la barra lo avisa con botón para abrir su release (sin autoabrir el navegador).
 - Detalle Rust/IPC: [src-tauri/README.md](src-tauri/README.md).
 
 ## Versionado

@@ -17,7 +17,9 @@ const gameList = document.getElementById('game-list');
 const menuStatus = document.getElementById('menu-status');
 const shell = document.getElementById('shell');
 const updateBar = document.getElementById('update-bar');
+const updateStatus = document.getElementById('update-status');
 const updateBtn = document.getElementById('update-btn');
+const updateLauncherBtn = document.getElementById('update-launcher-btn');
 const menuHelp = document.getElementById('menu-help');
 const helpFab = document.getElementById('help-fab');
 const helpModal = document.getElementById('help-modal');
@@ -47,6 +49,7 @@ let contentUpdates = [];
 let launcherUpdate = null;
 let desktopInfo = null;
 let skipRequested = false;
+let updateBusy = false;
 
 const SKIP_BOOT_KEY = 'hortelano:skip-boot';
 const SELECTED_GAME_KEY = 'hortelano:selected-game';
@@ -190,12 +193,10 @@ function showMenu() {
   shell.dataset.screen = 'menu';
   renderList();
   if (isDesktop()) {
-    refreshUpdates().catch((err) => {
-      console.warn('refreshUpdates', err);
-      if (updateBar) {
-        updateBar.hidden = false;
-        updateBar.textContent = 'Desktop · updates no disponibles';
-      }
+    syncUpdatesOnOpen().catch((err) => {
+      console.warn('syncUpdatesOnOpen', err);
+      setUpdateStatus('Desktop · updates no disponibles');
+      if (updateBar) updateBar.hidden = false;
     });
   }
 }
@@ -290,11 +291,57 @@ function launchSelected() {
   location.href = `../runner/?game=${encodeURIComponent(game.id)}`;
 }
 
+function setUpdateStatus(text) {
+  if (updateStatus) updateStatus.textContent = text;
+  else if (updateBar) updateBar.hidden = false;
+}
+
+function pendingContentUpdates(list = contentUpdates) {
+  return list.filter((c) => c.updateAvailable && c.downloadUrl);
+}
+
+function paintUpdateBar({ pendingContent = pendingContentUpdates(), autoNote = '' } = {}) {
+  if (!updateBar) return;
+  updateBar.hidden = false;
+
+  const launcherReady = Boolean(launcherUpdate?.updateAvailable);
+  updateBar.dataset.launcherUpdate = launcherReady ? '1' : '0';
+
+  const bits = [];
+  if (launcherReady) {
+    bits.push(`launcher ${launcherUpdate.currentVersion} → ${launcherUpdate.latestVersion}`);
+  }
+  for (const c of pendingContent) {
+    bits.push(`${c.gameId} ${c.localVersion} → ${c.remoteVersion}`);
+  }
+
+  if (autoNote) {
+    setUpdateStatus(autoNote);
+  } else if (!bits.length) {
+    setUpdateStatus(`Desktop v${desktopInfo?.launcherVersion || launcherUpdate?.currentVersion || '?'} · packs al día`);
+  } else {
+    setUpdateStatus(bits.join(' · '));
+  }
+
+  if (updateBtn) {
+    const showPacks = pendingContent.length > 0;
+    updateBtn.hidden = !showPacks;
+    updateBtn.textContent = showPacks ? `Descargar packs (U)` : 'Descargar packs';
+  }
+  if (updateLauncherBtn) {
+    updateLauncherBtn.hidden = !launcherReady;
+    if (launcherReady) {
+      updateLauncherBtn.textContent = `Launcher ${launcherUpdate.latestVersion} → abrir release`;
+    }
+  }
+}
+
 async function refreshUpdates() {
   if (!updateBar) return;
   updateBar.hidden = false;
-  updateBar.textContent = 'Buscando updates en GitHub…';
+  setUpdateStatus('Buscando updates en GitHub…');
   if (updateBtn) updateBtn.hidden = true;
+  if (updateLauncherBtn) updateLauncherBtn.hidden = true;
 
   const [launcher, contents] = await Promise.all([
     checkLauncherUpdate(),
@@ -303,68 +350,101 @@ async function refreshUpdates() {
   launcherUpdate = launcher;
   contentUpdates = contents;
   renderList();
-
-  const pendingContent = contents.filter((c) => c.updateAvailable && c.downloadUrl);
-  const bits = [];
-  if (launcher.updateAvailable) {
-    bits.push(`launcher ${launcher.currentVersion} → ${launcher.latestVersion}`);
-  }
-  for (const c of pendingContent) {
-    bits.push(`${c.gameId} ${c.localVersion} → ${c.remoteVersion}`);
-  }
-
-  if (!bits.length) {
-    updateBar.textContent = `Desktop v${desktopInfo?.launcherVersion || '?'} · packs al día`;
-    if (updateBtn) updateBtn.hidden = true;
-    return;
-  }
-
-  updateBar.textContent = `Update: ${bits.join(' · ')}`;
-  if (updateBtn) {
-    updateBtn.hidden = false;
-    updateBtn.textContent = pendingContent.length
-      ? 'Descargar packs (U)'
-      : 'Abrir releases launcher (U)';
-  }
+  paintUpdateBar();
+  return {
+    launcher,
+    contents,
+    pendingContent: pendingContentUpdates(contents),
+  };
 }
 
-async function applyUpdates() {
-  if (!isDesktop()) return;
-  menuStatus.textContent = '';
-  const pending = contentUpdates.filter((c) => c.updateAvailable && c.downloadUrl);
-  if (!pending.length) {
-    if (launcherUpdate?.htmlUrl) {
-      try {
-        await openExternalUrl(launcherUpdate.htmlUrl);
-      } catch {
-        window.open(launcherUpdate.htmlUrl, '_blank', 'noopener');
-      }
-      menuStatus.textContent = 'Abre el Release del launcher y descarga el build de tu SO (unsigned).';
-    } else {
-      menuStatus.textContent = 'No hay packs descargables ahora mismo.';
-    }
-    return;
-  }
-
-  updateBar.textContent = 'Descargando content packs…';
+async function installPendingPacks(pending) {
+  if (!pending.length) return false;
+  updateBusy = true;
   if (updateBtn) updateBtn.disabled = true;
+  if (updateLauncherBtn) updateLauncherBtn.disabled = true;
   try {
     for (const item of pending) {
-      updateBar.textContent = `Descargando ${item.gameId}…`;
+      setUpdateStatus(`Descargando ${item.gameId} ${item.remoteVersion || ''}…`.trim());
       await installContentPack(item.gameId, item.downloadUrl, item.sha256 || null);
     }
     const base = await loadCatalogFromFetch();
     const catalog = await enrichFromDesktop(base);
     games = catalog.games;
     catalogReady = true;
+    renderList();
+    return true;
+  } finally {
+    updateBusy = false;
+    if (updateBtn) updateBtn.disabled = false;
+    if (updateLauncherBtn) updateLauncherBtn.disabled = false;
+  }
+}
+
+/** On menu open: check Releases, auto-install content packs, keep launcher as UI notice. */
+async function syncUpdatesOnOpen() {
+  const { pendingContent } = await refreshUpdates();
+  if (!pendingContent.length) return;
+
+  menuStatus.textContent = 'Actualizando content packs…';
+  try {
+    await installPendingPacks(pendingContent);
+    await refreshUpdates();
+    paintUpdateBar({
+      autoNote: launcherUpdate?.updateAvailable
+        ? `Packs actualizados · launcher ${launcherUpdate.currentVersion} → ${launcherUpdate.latestVersion}`
+        : `Packs actualizados · Desktop v${desktopInfo?.launcherVersion || '?'}`,
+    });
+    menuStatus.textContent = 'Packs listos para jugar.';
+  } catch (err) {
+    menuStatus.textContent = errorText(err);
+    setUpdateStatus('Fallo al actualizar packs — pulsa U para reintentar');
+    if (updateBtn) {
+      updateBtn.hidden = false;
+      updateBtn.textContent = 'Reintentar packs (U)';
+    }
+  }
+}
+
+async function applyUpdates() {
+  if (!isDesktop() || updateBusy) return;
+  menuStatus.textContent = '';
+  let pending = pendingContentUpdates();
+  if (!pending.length) {
+    try {
+      const refreshed = await refreshUpdates();
+      pending = refreshed.pendingContent;
+    } catch (err) {
+      menuStatus.textContent = errorText(err);
+      return;
+    }
+  }
+  if (!pending.length) {
+    menuStatus.textContent = launcherUpdate?.updateAvailable
+      ? 'Packs al día. Hay launcher nuevo: usa «abrir release» arriba.'
+      : 'No hay packs nuevos en Releases.';
+    return;
+  }
+
+  try {
+    await installPendingPacks(pending);
     await refreshUpdates();
     menuStatus.textContent = 'Packs actualizados.';
   } catch (err) {
     menuStatus.textContent = errorText(err);
-    updateBar.textContent = 'Fallo al actualizar packs';
-  } finally {
-    if (updateBtn) updateBtn.disabled = false;
+    setUpdateStatus('Fallo al actualizar packs');
   }
+}
+
+async function openLauncherRelease() {
+  const url = launcherUpdate?.htmlUrl;
+  if (!url) return;
+  try {
+    await openExternalUrl(url);
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
+  menuStatus.textContent = 'Descarga el build de tu SO (unsigned) e instálalo / descomprime el portable.';
 }
 
 function onKey(event) {
@@ -410,6 +490,11 @@ bootSection.addEventListener('click', () => {
 if (updateBtn) {
   updateBtn.addEventListener('click', () => {
     applyUpdates();
+  });
+}
+if (updateLauncherBtn) {
+  updateLauncherBtn.addEventListener('click', () => {
+    openLauncherRelease();
   });
 }
 
