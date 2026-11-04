@@ -304,6 +304,7 @@ body {
 .display-copy {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   gap: 10px;
   min-width: 0;
@@ -330,10 +331,11 @@ body {
 }
 
 .display-repo {
-  margin: 0;
+  margin: 4px 0 0;
   max-width: 100%;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-size: 11px;
   line-height: 1.35;
@@ -341,6 +343,7 @@ body {
   text-decoration: none;
   word-break: break-all;
   text-shadow: 0 1px 0 #000;
+  text-align: center;
 }
 
 .display-repo .gh-icon {
