@@ -1,0 +1,13 @@
+[[permission]]
+identifier = "allow-app-commands"
+description = "Allow Hortelano's Daily custom IPC commands (packs, updates, desktop info)."
+commands.allow = [
+  "get_desktop_info",
+  "list_installed_packs",
+  "seed_local_packs",
+  "verify_file_sha256",
+  "check_launcher_update",
+  "check_content_updates",
+  "install_content_pack",
+  "open_external_url"
+]

@@ -191,9 +191,10 @@ function showMenu() {
   renderList();
   if (isDesktop()) {
     refreshUpdates().catch((err) => {
+      console.warn('refreshUpdates', err);
       if (updateBar) {
         updateBar.hidden = false;
-        updateBar.textContent = `Updates no disponibles (${errorText(err)})`;
+        updateBar.textContent = 'Desktop · updates no disponibles';
       }
     });
   }
