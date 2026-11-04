@@ -26,7 +26,11 @@ pub fn spawn(roots: StaticRoots) -> AppResult<u16> {
     thread::spawn(move || {
         for request in server.incoming_requests() {
             let roots = Arc::clone(&roots);
-            let _ = handle(request, &roots);
+            // Handle each request on its own thread so parallel module/ROM
+            // fetches from the WebView are not serialized behind large assets.
+            thread::spawn(move || {
+                let _ = handle(request, &roots);
+            });
         }
     });
 
@@ -46,10 +50,7 @@ fn handle(request: Request, roots: &StaticRoots) -> AppResult<()> {
 
     match file {
         Some(path) => {
-            let mime = mime_guess::from_path(&path)
-                .first_or_octet_stream()
-                .essence_str()
-                .to_string();
+            let mime = mime_for_path(&path);
             if request.method() == &Method::Head {
                 let len = fs::metadata(&path)?.len();
                 let mut response = Response::empty(StatusCode(200));
@@ -73,6 +74,36 @@ fn handle(request: Request, roots: &StaticRoots) -> AppResult<()> {
     Ok(())
 }
 
+fn mime_for_path(path: &Path) -> String {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "html" | "htm" => "text/html; charset=utf-8".into(),
+        "js" | "mjs" => "text/javascript; charset=utf-8".into(),
+        "css" => "text/css; charset=utf-8".into(),
+        "json" => "application/json; charset=utf-8".into(),
+        "wasm" => "application/wasm".into(),
+        "png" => "image/png".into(),
+        "jpg" | "jpeg" => "image/jpeg".into(),
+        "gif" => "image/gif".into(),
+        "svg" => "image/svg+xml".into(),
+        "woff2" => "font/woff2".into(),
+        "webm" => "video/webm".into(),
+        "mp4" => "video/mp4".into(),
+        "gz" => "application/gzip".into(),
+        "gba" => "application/octet-stream".into(),
+        "txt" | "md" => "text/plain; charset=utf-8".into(),
+        _ => mime_guess::from_path(path)
+            .first_or_octet_stream()
+            .essence_str()
+            .to_string(),
+    }
+}
+
 fn add_common_headers<R: std::io::Read>(response: &mut Response<R>, mime: &str) {
     if let Ok(header) = Header::from_bytes("Content-Type", mime) {
         response.add_header(header);
@@ -81,6 +112,10 @@ fn add_common_headers<R: std::io::Read>(response: &mut Response<R>, mime: &str) 
         response.add_header(header);
     }
     if let Ok(header) = Header::from_bytes("Access-Control-Allow-Origin", "*") {
+        response.add_header(header);
+    }
+    // Help WKWebView treat module scripts / wasm consistently.
+    if let Ok(header) = Header::from_bytes("Cross-Origin-Resource-Policy", "cross-origin") {
         response.add_header(header);
     }
 }
@@ -138,6 +173,8 @@ fn normalize_rel(rel: &str) -> Option<PathBuf> {
 }
 
 fn percent_decode(input: &str) -> String {
+    // Path decoding only: keep literal '+' (protocol files use names like
+    // dailyred-conf-v2+status-v1.js). Treating '+' as space is for query forms.
     let bytes = input.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -149,7 +186,7 @@ fn percent_decode(input: &str) -> String {
                 continue;
             }
         }
-        out.push(if bytes[i] == b'+' { b' ' } else { bytes[i] });
+        out.push(bytes[i]);
         i += 1;
     }
     String::from_utf8_lossy(&out).into_owned()
@@ -181,4 +218,22 @@ pub fn local_url(port: u16, path: &str) -> String {
         format!("/{path}")
     };
     format!("http://127.0.0.1:{port}{path}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::percent_decode;
+
+    #[test]
+    fn keeps_plus_in_protocol_filenames() {
+        assert_eq!(
+            percent_decode("runner/protocols/dailyred-conf-v2+status-v1.js"),
+            "runner/protocols/dailyred-conf-v2+status-v1.js"
+        );
+    }
+
+    #[test]
+    fn decodes_percent_sequences() {
+        assert_eq!(percent_decode("shell/assets/logo%20hortelano.png"), "shell/assets/logo hortelano.png");
+    }
 }

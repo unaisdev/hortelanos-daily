@@ -7,6 +7,17 @@
   <meta name="color-scheme" content="light dark">
   <link rel="preload" href="vendor/pixelify-sans.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
+  <script>
+    window.__hortelanoBootTimer = setTimeout(function () {
+      var title = document.getElementById('game-title');
+      var err = document.getElementById('error-text');
+      var app = document.querySelector('.app');
+      if (title && title.textContent.trim() === '…' && app && app.dataset.state === 'title') {
+        if (err) err.textContent = 'No se pudo cargar el runner (JS). Cierra y vuelve a abrir la app, o usa «Reintentar».';
+        if (app) app.dataset.state = 'error';
+      }
+    }, 4000);
+  </script>
   <script type="module" src="app.js"></script>
 </head>
 <body>

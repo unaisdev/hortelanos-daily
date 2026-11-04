@@ -59,6 +59,8 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, {
       'Content-Type': types[extname(path)] || 'application/octet-stream',
       'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
     });
     res.end(body);
   } catch (err) {

@@ -350,8 +350,12 @@ body {
   transition: transform 140ms ease;
 }
 
-.trainer-slot.is-disabled {
-  opacity: 0.5;
+.trainer-slot.is-disabled:not(.is-selected) {
+  opacity: 0.55;
+}
+
+.trainer-slot.is-disabled.is-selected {
+  opacity: 1;
 }
 
 .trainer-slot .cursor {

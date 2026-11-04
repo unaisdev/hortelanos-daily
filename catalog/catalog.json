@@ -3,8 +3,10 @@
   "launcher": {
     "id": "hortelanos-daily",
     "name": "Hortelano's Daily",
-    "version": "0.1.0",
-    "minProtocolAdapters": ["dailyred-conf-v2+status-v1"]
+    "version": "0.1.1",
+    "minProtocolAdapters": [
+      "dailyred-conf-v2+status-v1"
+    ]
   },
   "games": [
     {
