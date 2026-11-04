@@ -111,15 +111,16 @@ jobs:
             }
           }
 
-          @"
-Hortelano's Daily — Windows portable
-====================================
-1. Unzip this folder anywhere.
-2. Run "Hortelanos Daily.exe".
-3. Keep the resources/ folder next to the exe.
-4. Needs Microsoft Edge WebView2 (usually already on Windows 10/11).
-5. Unsigned build: SmartScreen → More info → Run anyway.
-"@ | Set-Content -Path (Join-Path $stage "README-portable.txt") -Encoding UTF8
+          $readme = @(
+            "Hortelano's Daily - Windows portable",
+            "====================================",
+            "1. Unzip this folder anywhere.",
+            "2. Run Hortelanos Daily.exe.",
+            "3. Keep the resources/ folder next to the exe.",
+            "4. Needs Microsoft Edge WebView2 (usually already on Windows 10/11).",
+            "5. Unsigned build: SmartScreen -> More info -> Run anyway."
+          ) -join "`n"
+          Set-Content -Path (Join-Path $stage "README-portable.txt") -Value $readme -Encoding UTF8
 
           $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $zip = "Hortelanos.Daily_${ver}_x64-portable.zip"
