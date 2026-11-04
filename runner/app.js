@@ -33,7 +33,7 @@ const ui = {
 
 const params = new URLSearchParams(location.search);
 const gameId = params.get('game') || sessionStorage.getItem('hortelano:selected-game');
-if (!gameId) location.replace('../shell/');
+if (!gameId) location.replace('../shell/?from=game');
 
 const session = {
   get(key) { try { return sessionStorage.getItem(key); } catch { return null; } },
@@ -229,9 +229,17 @@ function endDailyGame(delayMs) {
 }
 
 function onClick(button, handler) {
-  button.addEventListener('click', () => {
+  if (!button) return;
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
     button.blur();
-    handler();
+    Promise.resolve()
+      .then(() => handler())
+      .catch((err) => {
+        console.error(err);
+        ui.errorText.textContent = err?.message || String(err);
+        setState('error');
+      });
   });
 }
 
@@ -372,8 +380,13 @@ async function boot() {
   };
 }
 
-boot().catch((err) => {
-  console.error(err);
-  ui.errorText.textContent = err?.message || String(err);
-  setState('error');
-});
+boot()
+  .then(() => {
+    clearTimeout(window.__hortelanoBootTimer);
+  })
+  .catch((err) => {
+    clearTimeout(window.__hortelanoBootTimer);
+    console.error(err);
+    ui.errorText.textContent = err?.message || String(err);
+    setState('error');
+  });

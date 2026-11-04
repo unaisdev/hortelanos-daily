@@ -11,9 +11,18 @@ Hortelano's Daily se distribuye **sin firma de código**. El sistema operativo a
 
 ## Windows (SmartScreen)
 
-1. Ejecuta el `.exe` / instalador.
+**Recomendado — portable (sin instalar):**
+1. Descarga `Hortelanos.Daily_*-x64-portable.zip`.
+2. Descomprime en una carpeta (por ejemplo Escritorio).
+3. Ejecuta `Hortelanos Daily.exe` **dejando junto a él la carpeta `resources/`**.
+4. Si aparece SmartScreen: **Más información** → **Ejecutar de todas formas**.
+
+**Instalador (opcional):**
+1. Ejecuta el `-setup.exe` o `.msi`.
 2. Si aparece SmartScreen: **Más información** → **Ejecutar de todas formas**.
 3. Verifica SHA-256 del asset.
+
+Hace falta **WebView2** (suele venir en Windows 10/11). Si la ventana sale en blanco: [instalar WebView2](https://developer.microsoft.com/microsoft-edge/webview2/).
 
 ## Ubuntu / Linux
 

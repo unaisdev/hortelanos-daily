@@ -1,0 +1,24 @@
+Sprites
+-------
+Pokémon sprites under shell/assets/sprites/ are from
+https://github.com/PokeAPI/sprites (community archive of game sprites).
+
+Trainer front pics under shell/assets/trainers/:
+- red.png — pret/pokefirered `graphics/trainers/front_pics/red_front_pic.png`
+  (via amoi-builds/dailyred build tree)
+- gold.png — Ethan battle front from amoi-builds/halloflegends patch
+  (`graphics/trainers/front_pics/hol_ethan.png`, sprite credit FourLeafSunny
+  as listed in Hall of Legends README / The Spriters Resource)
+
+Pokémon © Nintendo / Creatures / GAME FREAK.
+
+Battle / intro background
+-------------------------
+shell/assets/bg/emerald-intro.{mp4,webm} (+ poster) — Pokémon Emerald opening
+meadow bicycle segment (trainer on bike with Pokémon in the prairie), trimmed
+and muted for local fan-project backdrop use.
+shell/assets/bg/bg-gen3*.png — Pokémon Showdown Gen3 plates (fallback/poster lineage).
+
+Logo
+----
+shell/assets/logo.jpg — generated title card for Hortelano's Daily (fan project).

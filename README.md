@@ -50,9 +50,23 @@ npm run desktop:build   # instaladores en src-tauri/target/release/bundle/
 ```
 
 - Builds **unsigned** por plataforma (macOS / Windows / Ubuntu). Guía: [docs/UNSIGNED_INSTALL.md](docs/UNSIGNED_INSTALL.md).
+- En Windows hay **portable** (`*-x64-portable.zip`: descomprimir y ejecutar, sin instalador) además del setup.
 - Updates vía GitHub Releases: launcher (`v*`) + content packs (`content-v*` en cada repo de juego).
 - En el menú desktop: **U** busca/aplica updates de packs (SHA-256).
 - Detalle Rust/IPC: [src-tauri/README.md](src-tauri/README.md).
+
+## Versionado
+
+Se sigue **siempre el sistema de versionado de GitHub Releases** (SemVer con prefijo):
+
+| Qué | Tags en GitHub | Ejemplo |
+|-----|----------------|---------|
+| Launcher (este repo) | `vMAJOR.MINOR.PATCH` | [`v0.1.0`](https://github.com/unaisdev/hortelanos-daily/releases/tag/v0.1.0) |
+| Content packs (repos de cada juego) | `content-vMAJOR.MINOR.PATCH` | `content-v0.1.0` |
+
+- Cada release pública del launcher debe corresponder a un tag `v*` en este repo.
+- Los packs de juego se versionan en su propio repo con tags `content-v*`; el launcher los resuelve desde ahí.
+- No inventar esquemas paralelos: el número canónico es el del tag de GitHub Release.
 
 ## Licencias
 

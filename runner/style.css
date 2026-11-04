@@ -175,6 +175,7 @@ a { color: inherit; text-underline-offset: 3px; }
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0 5cqw;
   margin: 0;
+  padding: 0;
 }
 
 .stats div {
@@ -184,11 +185,13 @@ a { color: inherit; text-underline-offset: 3px; }
 }
 
 .stats dd {
+  display: block;
   margin: 0;
   font: 700 max(20px, 9cqh)/1 var(--font-pixel);
 }
 
 .stats dt {
+  display: block;
   margin-top: 1cqh;
   font-size: max(11px, 3.4cqh);
   color: #b9c8d5;
@@ -221,6 +224,7 @@ a { color: inherit; text-underline-offset: 3px; }
 .snow {
   position: absolute;
   inset: -160px 0 0;
+  pointer-events: none;
   background-image:
     radial-gradient(2px 2px at 20px 30px, #fff 50%, transparent 51%),
     radial-gradient(2px 2px at 90px 110px, #fff 50%, transparent 51%),

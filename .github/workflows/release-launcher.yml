@@ -62,10 +62,71 @@ jobs:
           releaseBody: |
             Builds **sin firma de código**. Ver `docs/UNSIGNED_INSTALL.md` y `SHA256SUMS`.
 
-            Content packs de cada juego se publican en sus repos (`content-v*`).
+            - **Windows portable:** `*-x64-portable.zip` (descomprimir y ejecutar, sin instalar).
+            - Content packs de cada juego se publican en sus repos (`content-v*`).
           releaseDraft: true
           includeUpdaterJson: false
           args: ${{ matrix.args }}
+
+      - name: Package Windows portable ZIP
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $stage = "portable/Hortelanos Daily"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          $exe = Get-ChildItem "src-tauri/target/release/*.exe" |
+            Where-Object { $_.Name -notlike '*setup*' -and $_.Name -notlike '*uninstall*' } |
+            Select-Object -First 1
+          if (-not $exe) { throw "No release exe found under src-tauri/target/release" }
+
+          Copy-Item $exe.FullName -Destination (Join-Path $stage "Hortelanos Daily.exe")
+
+          $resCandidates = @(
+            "src-tauri/target/release/resources",
+            "src-tauri/target/release/hortelanos-daily_resources",
+            "src-tauri/target/release/Hortelanos Daily_resources"
+          )
+          $copiedRes = $false
+          foreach ($res in $resCandidates) {
+            if (Test-Path $res) {
+              Copy-Item $res -Destination (Join-Path $stage "resources") -Recurse -Force
+              $copiedRes = $true
+              break
+            }
+          }
+          # Fallback: copy bundled static trees next to the exe
+          if (-not $copiedRes) {
+            $resDir = Join-Path $stage "resources"
+            New-Item -ItemType Directory -Force -Path $resDir | Out-Null
+            foreach ($name in @('shell','runner','catalog','games','docs','index.html')) {
+              $src = Join-Path "desktop-www" $name
+              if (Test-Path $src) {
+                Copy-Item $src -Destination (Join-Path $resDir $name) -Recurse -Force
+              }
+            }
+          }
+
+          $readme = @(
+            "Hortelano's Daily - Windows portable",
+            "====================================",
+            "1. Unzip this folder anywhere.",
+            "2. Run Hortelanos Daily.exe.",
+            "3. Keep the resources/ folder next to the exe.",
+            "4. Needs Microsoft Edge WebView2 (usually already on Windows 10/11).",
+            "5. Unsigned build: SmartScreen -> More info -> Run anyway."
+          ) -join "`n"
+          Set-Content -Path (Join-Path $stage "README-portable.txt") -Value $readme -Encoding UTF8
+
+          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $zip = "Hortelanos.Daily_${ver}_x64-portable.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path $stage -DestinationPath $zip -Force
+          gh release upload "$env:RELEASE_TAG" $zip --clobber
 
   checksums:
     needs: build

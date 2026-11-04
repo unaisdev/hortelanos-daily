@@ -18,7 +18,15 @@ const menuStatus = document.getElementById('menu-status');
 const shell = document.getElementById('shell');
 const updateBar = document.getElementById('update-bar');
 const updateBtn = document.getElementById('update-btn');
+const menuHelp = document.getElementById('menu-help');
+const helpFab = document.getElementById('help-fab');
+const helpModal = document.getElementById('help-modal');
+const helpModalClose = document.getElementById('help-modal-close');
 const bootHint = document.querySelector('.boot-hint');
+const displayName = document.getElementById('display-name');
+const displayBoss = document.getElementById('display-boss');
+const displayBlurb = document.getElementById('display-blurb');
+const displayMeta = document.getElementById('display-meta');
 
 const LINES = [
   'HORTELANO BIOS v0.1',
@@ -39,6 +47,38 @@ let contentUpdates = [];
 let launcherUpdate = null;
 let desktopInfo = null;
 let skipRequested = false;
+
+const SKIP_BOOT_KEY = 'hortelano:skip-boot';
+const SELECTED_GAME_KEY = 'hortelano:selected-game';
+
+function shouldSkipBoot() {
+  try {
+    if (sessionStorage.getItem(SKIP_BOOT_KEY) === '1') return true;
+  } catch { /* */ }
+  const params = new URLSearchParams(location.search);
+  return params.get('from') === 'game' || params.get('skipBoot') === '1';
+}
+
+function clearSkipBoot() {
+  try {
+    sessionStorage.removeItem(SKIP_BOOT_KEY);
+  } catch { /* */ }
+  const url = new URL(location.href);
+  if (url.searchParams.has('from') || url.searchParams.has('skipBoot')) {
+    url.searchParams.delete('from');
+    url.searchParams.delete('skipBoot');
+    history.replaceState({}, '', url.pathname + url.search + url.hash);
+  }
+}
+
+function restoreSelectedIndex() {
+  try {
+    const id = sessionStorage.getItem(SELECTED_GAME_KEY);
+    if (!id) return;
+    const idx = games.findIndex((g) => g.id === id);
+    if (idx >= 0) selected = idx;
+  } catch { /* */ }
+}
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -145,13 +185,16 @@ function showMenu() {
   clearTimeout(bootTimer);
   bootSection.hidden = true;
   menuSection.hidden = false;
+  if (menuHelp) menuHelp.hidden = false;
+  if (helpFab) helpFab.hidden = false;
   shell.dataset.screen = 'menu';
   renderList();
   if (isDesktop()) {
     refreshUpdates().catch((err) => {
+      console.warn('refreshUpdates', err);
       if (updateBar) {
         updateBar.hidden = false;
-        updateBar.textContent = `Updates no disponibles (${errorText(err)})`;
+        updateBar.textContent = 'Desktop · updates no disponibles';
       }
     });
   }
@@ -166,31 +209,65 @@ function requestSkip() {
   showMenu();
 }
 
+function spriteFor(game) {
+  const menu = game.menu || {};
+  const animated = menu.sprite || '';
+  const fallback = menu.spriteStatic || '';
+  return { animated, fallback, accent: menu.accent || '#5cff8a', mascot: menu.mascot || game.boss || '' };
+}
+
+function renderDisplay() {
+  const game = games[selected];
+  if (!game || !displayName) return;
+  const spr = spriteFor(game);
+  const upd = contentUpdates.find((u) => u.gameId === game.id && u.updateAvailable);
+  const updLabel = upd ? ` · update ${upd.remoteVersion || '?'}` : '';
+  displayName.textContent = game.name;
+  displayBoss.textContent = `VS ${game.boss || spr.mascot || '?'}`;
+  displayBlurb.textContent = game.blurb || '';
+  displayMeta.textContent = game.playable
+    ? `protocol ${game.protocolId} · content ${game.contentVersion}${updLabel}`
+    : `${game.reason || 'No disponible'}${updLabel}`;
+}
+
 function renderList() {
+  if (!gameList) return;
   gameList.innerHTML = '';
   games.forEach((game, index) => {
     const li = document.createElement('li');
-    li.className = `game-item${game.playable ? '' : ' is-disabled'}`;
+    const isSel = index === selected;
+    li.className = `trainer-slot${game.playable ? '' : ' is-disabled'}${isSel ? ' is-selected' : ''}`;
     li.setAttribute('role', 'option');
-    li.setAttribute('aria-selected', String(index === selected));
+    li.setAttribute('aria-selected', String(isSel));
+    li.setAttribute('aria-label', game.name);
     li.tabIndex = -1;
-    const upd = contentUpdates.find((u) => u.gameId === game.id && u.updateAvailable);
-    const updLabel = upd
-      ? ` · update ${upd.remoteVersion || '?'}`
-      : '';
+    const spr = spriteFor(game);
+    const src = spr.animated || spr.fallback;
+    const srcStatic = spr.fallback || spr.animated;
     li.innerHTML = `
-      <span class="cursor" aria-hidden="true">${index === selected ? '>' : ' '}</span>
-      <p class="name">${game.name}</p>
-      <p class="blurb">${game.blurb}</p>
-      <p class="meta">protocol ${game.protocolId} · content ${game.contentVersion}${game.playable ? '' : ` · ${game.reason}`}${updLabel}</p>
+      <span class="cursor" aria-hidden="true">${isSel ? '<img class="cursor-ball" src="assets/sprites/poke-ball.png?v=3" width="28" height="28" alt="">' : ''}</span>
+      <div class="sprite-wrap">
+        <img class="sprite" src="${src}" data-static="${srcStatic}" alt="">
+      </div>
+      <span class="slot-label">${game.boss || spr.mascot || game.name}</span>
     `;
+    const img = li.querySelector('.sprite');
+    if (img) {
+      img.addEventListener('error', () => {
+        if (img.dataset.static && img.src !== img.dataset.static) img.src = img.dataset.static;
+      });
+    }
     li.addEventListener('click', () => {
+      if (selected === index) {
+        launchSelected();
+        return;
+      }
       selected = index;
       renderList();
-      launchSelected();
     });
     gameList.appendChild(li);
   });
+  renderDisplay();
 }
 
 function launchSelected() {
@@ -207,7 +284,8 @@ function launchSelected() {
   }
   menuStatus.textContent = '';
   try {
-    sessionStorage.setItem('hortelano:selected-game', game.id);
+    sessionStorage.setItem(SELECTED_GAME_KEY, game.id);
+    sessionStorage.setItem(SKIP_BOOT_KEY, '1');
   } catch { /* */ }
   location.href = `../runner/?game=${encodeURIComponent(game.id)}`;
 }
@@ -297,11 +375,11 @@ function onKey(event) {
   }
   if (shell.dataset.screen !== 'menu') return;
   if (!games.length) return;
-  if (event.key === 'ArrowDown') {
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
     event.preventDefault();
     selected = (selected + 1) % games.length;
     renderList();
-  } else if (event.key === 'ArrowUp') {
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
     event.preventDefault();
     selected = (selected - 1 + games.length) % games.length;
     renderList();
@@ -309,6 +387,15 @@ function onKey(event) {
     event.preventDefault();
     launchSelected();
   } else if (event.key === 'Escape') {
+    if (helpModal?.open) {
+      event.preventDefault();
+      closeHelpModal();
+      return;
+    }
+    if (helpJustClosed) {
+      event.preventDefault();
+      return;
+    }
     location.reload();
   } else if ((event.key === 'u' || event.key === 'U') && isDesktop()) {
     event.preventDefault();
@@ -326,28 +413,73 @@ if (updateBtn) {
   });
 }
 
+let helpJustClosed = false;
+
+function openHelpModal() {
+  if (!helpModal) return;
+  if (typeof helpModal.showModal === 'function') helpModal.showModal();
+  else helpModal.setAttribute('open', '');
+}
+
+function closeHelpModal() {
+  if (!helpModal) return;
+  if (typeof helpModal.close === 'function') helpModal.close();
+  else helpModal.removeAttribute('open');
+}
+
+if (helpFab) {
+  helpFab.addEventListener('click', () => openHelpModal());
+}
+if (helpModalClose) {
+  helpModalClose.addEventListener('click', () => closeHelpModal());
+}
+if (helpModal) {
+  helpModal.addEventListener('click', (event) => {
+    if (event.target === helpModal) closeHelpModal();
+  });
+  helpModal.addEventListener('close', () => {
+    helpJustClosed = true;
+    queue(() => {
+      helpJustClosed = false;
+    }, 0);
+  });
+}
+
 window.addEventListener('keydown', onKey);
 
 // Fetch catalog first (never blocked by Tauri IPC). Desktop ready / enrich is best-effort.
-setBootHint('Cargando cartuchos…');
-bootLog.textContent = 'Loading catalog.json ..\n';
+const skipBoot = shouldSkipBoot();
+if (skipBoot) {
+  setBootHint('Volviendo al menú…');
+  bootLog.textContent = 'Restoring menu ..\n';
+} else {
+  setBootHint('Cargando cartuchos…');
+  bootLog.textContent = 'Loading catalog.json ..\n';
+}
 
 loadCatalogFromFetch()
   .then(async (catalog) => {
     games = catalog.games;
     catalogReady = true;
-    setBootHint('Pulsa Enter o haz clic para saltar');
-    // Kick boot immediately; enrich IPC in parallel without blocking skip/menu.
-    const bootPromise = runBoot();
+    restoreSelectedIndex();
     whenDesktopReady(800)
       .then(() => enrichFromDesktop({ games }))
       .then((enriched) => {
         if (!enriched?.games?.length) return;
         games = enriched.games;
+        restoreSelectedIndex();
         if (shell.dataset.screen === 'menu') renderList();
       })
       .catch(() => {});
-    return bootPromise;
+
+    if (skipBoot) {
+      clearSkipBoot();
+      showMenu();
+      return;
+    }
+
+    setBootHint('Pulsa Enter o haz clic para saltar');
+    return runBoot();
   })
   .catch((err) => {
     const text = errorText(err);

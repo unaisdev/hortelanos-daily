@@ -1,6 +1,6 @@
 {
   "name": "hortelanos-daily",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Hortelano's Daily — launcher de play-daily (Gold, Red, …)",
   "type": "module",
