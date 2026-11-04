@@ -12,7 +12,7 @@ use crate::packs::{self, CatalogGame, ContentPointer, PackStatus};
 use crate::paths;
 
 const LAUNCHER_REPO: &str = "unaisdev/hortelanos-daily";
-const USER_AGENT: &str = "hortelanos-daily/0.2.0";
+const USER_AGENT: &str = "hortelanos-daily/1.0.0";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -274,6 +274,7 @@ pub async fn install_content_pack(
         fs::remove_dir_all(&dest)?;
     }
     fs::rename(&staging, &dest)?;
+    packs::write_pack_origin(&dest, "github")?;
     let _ = fs::remove_file(&zip_path);
 
     let status = packs::inspect_pack(app, &game)?;
@@ -336,6 +337,7 @@ pub fn seed_bundled_packs(app: &AppHandle) -> AppResult<Vec<PackStatus>> {
         let bundled = paths::static_root(app)?.join(&game.pack_path);
         if bundled.join("game.manifest.json").is_file() {
             copy_dir_recursive(&bundled, &dest)?;
+            packs::write_pack_origin(&dest, "bundled")?;
         }
     }
     packs::list_packs(app)

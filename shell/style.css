@@ -304,6 +304,7 @@ body {
 .display-copy {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   gap: 10px;
   min-width: 0;
@@ -323,6 +324,41 @@ body {
   margin: 0;
   font-size: 11px;
   color: #6f9f80;
+}
+
+.display-meta.from-github {
+  color: #9ec4ad;
+}
+
+.display-repo {
+  margin: 4px 0 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #8fd4a8;
+  text-decoration: none;
+  word-break: break-all;
+  text-shadow: 0 1px 0 #000;
+  text-align: center;
+}
+
+.display-repo .gh-icon {
+  flex: 0 0 auto;
+  opacity: 0.95;
+}
+
+.display-repo span {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.display-repo:hover,
+.display-repo:focus-visible {
+  color: #c8ffe0;
 }
 
 .trainer-rail {
@@ -373,6 +409,7 @@ body {
 }
 
 .trainer-slot .sprite-wrap {
+  position: relative;
   width: 120px;
   height: 120px;
   display: grid;
@@ -385,6 +422,27 @@ body {
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), inset 0 -6px 0 rgba(0, 0, 0, 0.18);
   overflow: hidden;
   transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.trainer-slot .pack-gh {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(8, 18, 12, 0.72);
+  color: #e8fff0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.trainer-slot .pack-gh .gh-icon {
+  width: 11px;
+  height: 11px;
 }
 
 .trainer-slot .sprite {
