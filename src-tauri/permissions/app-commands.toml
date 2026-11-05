@@ -9,5 +9,7 @@ commands.allow = [
   "check_launcher_update",
   "check_content_updates",
   "install_content_pack",
-  "open_external_url"
+  "open_external_url",
+  "load_player_stats",
+  "save_player_stats"
 ]

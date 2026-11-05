@@ -14,8 +14,13 @@ pub struct StaticRoots {
     pub games_overlay: PathBuf,
 }
 
+/// Stable loopback port so WebView `localStorage` (wins / battles / streaks)
+/// keeps the same origin across launcher restarts. A random port (`:0`) would
+/// reset stats every session because origin includes the port.
+pub const PREFERRED_PORT: u16 = 18787;
+
 pub fn spawn(roots: StaticRoots) -> AppResult<u16> {
-    let server = Server::http("127.0.0.1:0").map_err(|e| AppError::msg(format!("http bind: {e}")))?;
+    let server = bind_loopback()?;
     let port = server
         .server_addr()
         .to_ip()
@@ -35,6 +40,21 @@ pub fn spawn(roots: StaticRoots) -> AppResult<u16> {
     });
 
     Ok(port)
+}
+
+fn bind_loopback() -> AppResult<Server> {
+    let preferred = format!("127.0.0.1:{PREFERRED_PORT}");
+    match Server::http(&preferred) {
+        Ok(server) => Ok(server),
+        Err(preferred_err) => {
+            // Another Hortelano instance (or leftover bind) owns the port.
+            // Do not fall back to a random port — that would orphan localStorage.
+            Err(AppError::msg(format!(
+                "no se pudo enlazar {preferred} ({preferred_err}). \
+                 Cierra otra instancia de Hortelano's Daily e inténtalo de nuevo."
+            )))
+        }
+    }
 }
 
 fn handle(request: Request, roots: &StaticRoots) -> AppResult<()> {
@@ -227,7 +247,7 @@ pub fn local_url(port: u16, path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::percent_decode;
+    use super::{bind_loopback, percent_decode, PREFERRED_PORT};
 
     #[test]
     fn keeps_plus_in_protocol_filenames() {
@@ -240,5 +260,26 @@ mod tests {
     #[test]
     fn decodes_percent_sequences() {
         assert_eq!(percent_decode("shell/assets/logo%20hortelano.png"), "shell/assets/logo hortelano.png");
+    }
+
+    #[test]
+    fn preferred_port_is_stable_not_ephemeral() {
+        assert_ne!(PREFERRED_PORT, 0);
+        assert_eq!(PREFERRED_PORT, 18787);
+    }
+
+    #[test]
+    fn bind_loopback_uses_preferred_port() {
+        let server = match bind_loopback() {
+            Ok(s) => s,
+            Err(err) => {
+                // Another process may own the port on this machine; skip rather than flake.
+                eprintln!("skip bind_loopback_uses_preferred_port: {err}");
+                return;
+            }
+        };
+        let port = server.server_addr().to_ip().map(|a| a.port()).unwrap();
+        assert_eq!(port, PREFERRED_PORT);
+        drop(server);
     }
 }
