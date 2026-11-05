@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const out = join(root, 'desktop-www');
 
-const entries = ['shell', 'runner', 'catalog', 'games', 'docs', 'index.html'];
+const entries = ['shell', 'runner', 'shared', 'catalog', 'games', 'docs', 'index.html'];
 
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });

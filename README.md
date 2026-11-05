@@ -39,6 +39,12 @@ Ver [docs/PROTOCOL.md](docs/PROTOCOL.md). Hoy: `dailyred-conf-v2+status-v1`.
 
 Orden al cambiar el contrato: **adapter en launcher → Release launcher → content pack**.
 
+## Telemetría y errores
+
+El launcher puede enviar **uso agregado** (aperturas, qué ROM se juega) y **errores** a Sentry, sin tracking de clics. Detalle de qué se recoge y cómo ampliarlo: [docs/TELEMETRY.md](docs/TELEMETRY.md).
+
+Activación: pegar el DSN en `shared/telemetry.config.js` (`sentryDsn`). Vacío = desactivado.
+
 ## Escritorio (Tauri 2)
 
 Necesitas Rust (`rustup`) además de Node:

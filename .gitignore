@@ -5,6 +5,7 @@ pokefirered/
 dist/
 desktop-www/shell/
 desktop-www/runner/
+desktop-www/shared/
 desktop-www/catalog/
 desktop-www/games/
 desktop-www/docs/
