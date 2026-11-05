@@ -704,6 +704,13 @@ body {
   border-color: #102418;
 }
 
+.update-btn-changelog[data-has-update='1'] {
+  background: #102418;
+  color: var(--amber);
+  border-color: #102418;
+  font-weight: 700;
+}
+
 .update-btn:disabled {
   opacity: 0.5;
   cursor: wait;
@@ -711,6 +718,105 @@ body {
 
 .update-btn:hover:not(:disabled) {
   filter: brightness(1.06);
+}
+
+.changelog-modal-card {
+  width: min(440px, 100%);
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+}
+
+.changelog-modal-body {
+  overflow-y: auto;
+  gap: 14px;
+  max-height: min(55vh, 440px);
+  padding-right: 2px;
+}
+
+.changelog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #1a4d32;
+}
+
+.changelog-section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.changelog-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
+.changelog-section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  text-shadow: 1px 1px 0 #000;
+}
+
+.changelog-section-meta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.changelog-section[data-update='1'] .changelog-section-title {
+  color: #fff8e7;
+}
+
+.changelog-notes {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #d7ffe6;
+  text-shadow: 0 1px 0 #000;
+}
+
+.changelog-empty,
+.changelog-missing {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.changelog-foot {
+  margin: 0;
+}
+
+.changelog-foot-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.changelog-foot-btn[data-has-update='1'] {
+  color: #fff8e7;
+  text-shadow: 0 0 10px rgba(255, 212, 92, 0.45);
+}
+
+.changelog-foot-btn:hover,
+.changelog-foot-btn:focus-visible {
+  color: #fff8e7;
+  outline: none;
 }
 
 .site-foot {

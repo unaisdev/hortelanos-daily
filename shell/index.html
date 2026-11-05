@@ -28,6 +28,9 @@
 
   <div class="update-bar" id="update-bar" hidden>
     <span class="update-status" id="update-status">Desktop</span>
+    <button type="button" class="update-btn update-btn-changelog" id="changelog-btn" hidden aria-haspopup="dialog" aria-controls="changelog-modal">
+      Novedades
+    </button>
     <button type="button" class="update-btn" id="update-btn" hidden>Descargar packs</button>
     <button type="button" class="update-btn update-btn-launcher" id="update-launcher-btn" hidden>
       Abrir release launcher
@@ -101,6 +104,18 @@
     </div>
   </dialog>
 
+  <dialog class="help-modal changelog-modal" id="changelog-modal" aria-labelledby="changelog-modal-title">
+    <div class="help-modal-card changelog-modal-card">
+      <header class="help-modal-head">
+        <h2 id="changelog-modal-title">Novedades</h2>
+        <button type="button" class="help-modal-close" id="changelog-modal-close" aria-label="Cerrar">×</button>
+      </header>
+      <div class="help-modal-body changelog-modal-body" id="changelog-modal-body">
+        <p class="changelog-empty">Buscando notas en GitHub…</p>
+      </div>
+    </div>
+  </dialog>
+
   <main class="shell" data-screen="boot" id="shell">
     <section class="crt" id="boot" aria-live="polite">
       <pre class="boot-log" id="boot-log"></pre>
@@ -159,6 +174,11 @@
       <p class="menu-status" id="menu-status" role="status"></p>
       <footer class="site-foot">
         <p class="love">Hecho con todo el corazón por Hortelano</p>
+        <p class="changelog-foot" id="changelog-foot" hidden>
+          <button type="button" class="changelog-foot-btn" id="changelog-foot-btn" aria-haspopup="dialog" aria-controls="changelog-modal">
+            Novedades
+          </button>
+        </p>
         <p class="dev-credit">
           Desarrollado por
           <a href="https://github.com/unaisdev" target="_blank" rel="noopener noreferrer">unaisdev</a>

@@ -10,6 +10,7 @@ Cada juego publica su propio zip. El launcher solo lo descarga y verifica.
 | Asset | `<id>-content.zip` (`dailygold-content.zip`) |
 | Checksums | `SHA256SUMS` o `SHA256SUMS-<id>.txt` en el mismo Release |
 | Dentro del zip | `game.manifest.json` en la **raíz**, ROM, assets |
+| Body del Release | Notas en castellano para el modal **Novedades** del launcher — ver [RELEASE_NOTES.md](RELEASE_NOTES.md) |
 
 ## Empaquetar desde este repo (dev)
 
