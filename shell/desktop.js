@@ -85,3 +85,25 @@ export async function installContentPack(gameId, downloadUrl, expectedSha256 = n
 export async function openExternalUrl(url) {
   return invoke('open_external_url', { url }, 3000);
 }
+
+/** Durable stats mirror under app_data/stats/ (desktop only). */
+export async function loadPlayerStats(key) {
+  return invoke('load_player_stats', { key }, 1500);
+}
+
+export async function savePlayerStats(key, stats) {
+  return invoke('save_player_stats', { key, stats }, 1500);
+}
+
+/**
+ * @param {string} statsKey
+ * @returns {Promise<{ load: () => Promise<object|null>, save: (stats: object) => Promise<void> } | null>}
+ */
+export async function createStatsDiskMirror(statsKey) {
+  const ready = await whenDesktopReady();
+  if (!ready || !getInvoke()) return null;
+  return {
+    load: () => loadPlayerStats(statsKey),
+    save: (stats) => savePlayerStats(statsKey, stats),
+  };
+}

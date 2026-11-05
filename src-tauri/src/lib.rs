@@ -2,8 +2,10 @@ mod error;
 mod packs;
 mod paths;
 mod server;
+mod stats;
 mod updates;
 
+use serde_json::Value;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::error::AppResult;
@@ -63,6 +65,16 @@ async fn open_external_url(url: String) -> AppResult<()> {
         .map_err(|e| error::AppError::msg(format!("open url: {e}")))
 }
 
+#[tauri::command]
+fn load_player_stats(app: AppHandle, key: String) -> AppResult<Option<Value>> {
+    stats::load(&app, &key)
+}
+
+#[tauri::command]
+fn save_player_stats(app: AppHandle, key: String, stats: Value) -> AppResult<()> {
+    stats::save(&app, &key, &stats)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -76,6 +88,8 @@ pub fn run() {
             check_content_updates,
             install_content_pack,
             open_external_url,
+            load_player_stats,
+            save_player_stats,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

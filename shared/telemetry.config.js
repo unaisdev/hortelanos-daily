@@ -8,7 +8,7 @@ export default {
   sentryDsn: '',
 
   /** Release tag visible en Sentry (alinear con package.json / tag v*). */
-  release: 'hortelanos-daily@1.0.0',
+  release: 'hortelanos-daily@1.0.1',
 
   /** Entorno lógico. */
   environment: 'production',

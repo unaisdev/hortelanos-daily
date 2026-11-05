@@ -1,4 +1,5 @@
 // Stats y semilla diaria parametrizados por manifest.client.
+// En desktop se espejan a disco (app_data) para no depender solo de localStorage.
 
 const EMPTY = {
   wins: 0,
@@ -13,11 +14,14 @@ const EMPTY = {
 let memoryCopy = null;
 let activeKey = null;
 let seedPrefix = 'daily:';
+/** @type {{ load: () => Promise<object|null>, save: (stats: object) => Promise<void> } | null} */
+let diskMirror = null;
 
-export function configureDaily({ statsKey, seedPrefix: prefix }) {
+export function configureDaily({ statsKey, seedPrefix: prefix, diskMirror: mirror = null }) {
   activeKey = statsKey;
   seedPrefix = prefix;
   memoryCopy = null;
+  diskMirror = mirror;
 }
 
 export function today(now = new Date()) {
@@ -46,23 +50,86 @@ export function msUntilTomorrow(now = new Date()) {
   return midnight - now;
 }
 
+function normalize(raw) {
+  if (!raw || typeof raw !== 'object') return { ...EMPTY };
+  return {
+    ...EMPTY,
+    ...raw,
+    wins: Number(raw.wins) || 0,
+    losses: Number(raw.losses) || 0,
+    winStreak: Number(raw.winStreak) || 0,
+    dayStreak: Number(raw.dayStreak) || 0,
+  };
+}
+
+function battlesOf(stats) {
+  return (stats?.wins || 0) + (stats?.losses || 0);
+}
+
+/** Prefer the copy with more progress (battles), then a more recent lastPlayed. */
+export function pickRicherStats(a, b) {
+  const left = normalize(a);
+  const right = normalize(b);
+  const leftBattles = battlesOf(left);
+  const rightBattles = battlesOf(right);
+  if (rightBattles > leftBattles) return right;
+  if (leftBattles > rightBattles) return left;
+  if (right.lastPlayed && (!left.lastPlayed || right.lastPlayed > left.lastPlayed)) return right;
+  if (right.pending && !left.pending) return right;
+  return left;
+}
+
 export function loadStats() {
   if (!activeKey) throw new Error('configureDaily() no se ha llamado.');
   try {
     const saved = JSON.parse(localStorage.getItem(activeKey));
-    return { ...EMPTY, ...saved };
+    return normalize(saved);
   } catch {
-    return { ...EMPTY, ...memoryCopy };
+    return normalize(memoryCopy);
   }
 }
 
-function save(stats) {
+function saveLocal(stats) {
   memoryCopy = { ...stats };
   try {
     localStorage.setItem(activeKey, JSON.stringify(stats));
   } catch {
     /* storage blocked */
   }
+}
+
+function save(stats) {
+  saveLocal(stats);
+  if (diskMirror) {
+    diskMirror.save({ ...stats }).catch((err) => {
+      console.warn('No se pudo espejar stats a disco', err);
+    });
+  }
+}
+
+/**
+ * Merge localStorage with durable disk copy (desktop). Writes the winner to both.
+ * Call once after configureDaily() on boot.
+ */
+export async function hydrateStatsFromDisk() {
+  const local = loadStats();
+  if (!diskMirror) return local;
+
+  let disk = null;
+  try {
+    disk = await diskMirror.load();
+  } catch (err) {
+    console.warn('No se pudo leer stats de disco', err);
+  }
+
+  const chosen = pickRicherStats(local, disk);
+  saveLocal(chosen);
+  try {
+    await diskMirror.save({ ...chosen });
+  } catch (err) {
+    console.warn('No se pudo escribir stats a disco', err);
+  }
+  return chosen;
 }
 
 export function resultFor(stats, date) {

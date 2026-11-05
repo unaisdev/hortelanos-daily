@@ -3,9 +3,10 @@ import { loadGameFiles } from './game-files.js';
 import { getProtocolAdapter } from './protocols/index.js';
 import { checkGameCompat } from './compat.js';
 import {
-  configureDaily, today, dailySeed, msUntilTomorrow, loadStats, resultFor, currentStreaks,
-  markBattleStarted, recordResult, settleAbandonedGame,
+  configureDaily, today, dailySeed, msUntilTomorrow, loadStats, hydrateStatsFromDisk,
+  resultFor, currentStreaks, markBattleStarted, recordResult, settleAbandonedGame,
 } from './daily.js';
+import { createStatsDiskMirror } from '../shell/desktop.js';
 import {
   initTelemetry,
   setTelemetryContext,
@@ -398,12 +399,14 @@ async function boot() {
   RESULT = protocol.RESULT;
   practiceSeed = protocol.parseSeed(params.get('seed'));
 
+  const diskMirror = await createStatsDiskMirror(manifest.client.statsKey);
   configureDaily({
     statsKey: manifest.client.statsKey,
     seedPrefix: manifest.client.seedPrefix,
+    diskMirror,
   });
   muted = session.get(manifest.client.mutedKey) === '1';
-  stats = settleAbandonedGame(loadStats());
+  stats = settleAbandonedGame(await hydrateStatsFromDisk());
 
   ui.gameTitle.textContent = manifest.name;
   document.title = `${manifest.name} · Hortelano's Daily`;
