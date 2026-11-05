@@ -1,0 +1,16 @@
+{
+  "productName": "Hortelanos Daily (Debug)",
+  "identifier": "dev.unais.hortelanos-daily.debug",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Hortelano's Daily (Debug)",
+        "width": 980,
+        "height": 740,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  }
+}

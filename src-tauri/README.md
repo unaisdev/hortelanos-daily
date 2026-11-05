@@ -11,8 +11,9 @@ Wrapper desktop (WebView + FS + downloader de content packs). **Sin firma de có
 ```sh
 # desde la raíz del repo
 npm install
-npm run desktop:dev    # app nativa + servidor local 127.0.0.1
-npm run desktop:build  # instaladores en src-tauri/target/release/bundle/
+npm run desktop:dev          # «Hortelanos Daily (Debug)» + servidor local 127.0.0.1
+npm run desktop:build        # producción en target/release/bundle/
+npm run desktop:build:debug  # debug instalable (nombre/id distintos de prod)
 ```
 
 La web pura sigue disponible con `npm run serve` / `node scripts/serve.mjs`.
