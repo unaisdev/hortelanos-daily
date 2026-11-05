@@ -397,6 +397,7 @@ function notesForDisplay(raw) {
     })
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+$/gm, '')
     .trim();
 
   return text;
