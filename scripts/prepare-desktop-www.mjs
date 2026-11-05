@@ -3,9 +3,16 @@
 import { cp, mkdir, rm } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const out = join(root, 'desktop-www');
+
+// Inyecta DSN desde env/.env → shared/telemetry.secrets.js (gitignored) antes de copiar.
+spawnSync(process.execPath, [join(root, 'scripts', 'inject-telemetry-secrets.mjs')], {
+  cwd: root,
+  stdio: 'inherit',
+});
 
 const entries = ['shell', 'runner', 'shared', 'catalog', 'games', 'docs', 'index.html'];
 

@@ -41,9 +41,9 @@ Orden al cambiar el contrato: **adapter en launcher → Release launcher → con
 
 ## Telemetría y errores
 
-El launcher puede enviar **uso agregado** (aperturas, qué ROM se juega) y **errores** a Sentry, sin tracking de clics. Detalle de qué se recoge y cómo ampliarlo: [docs/TELEMETRY.md](docs/TELEMETRY.md).
+El launcher puede enviar **uso agregado** (aperturas, qué ROM se juega) y **errores** a Sentry, sin tracking de clics. Detalle: [docs/TELEMETRY.md](docs/TELEMETRY.md).
 
-Activación: pegar el DSN en `shared/telemetry.config.js` (`sentryDsn`). Vacío = desactivado.
+El DSN **no va en git**. Local: `.env` (`HORTELANO_SENTRY_DSN`) o `shared/telemetry.secrets.js`. Releases: secret de GitHub Actions `HORTELANO_SENTRY_DSN`. Sin DSN = desactivado.
 
 ## Escritorio (Tauri 2)
 

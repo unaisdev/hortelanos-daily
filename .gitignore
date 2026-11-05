@@ -16,6 +16,8 @@ src-tauri/icons/ios/
 .wrangler/
 .env
 .env.*
+!.env.example
+shared/telemetry.secrets.js
 games/*/rom/*.gba
 !games/dailygold/rom/dailyred.gba.gz
 !games/dailyred/rom/dailyred.gba.gz

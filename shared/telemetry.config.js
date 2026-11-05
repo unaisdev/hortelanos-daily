@@ -1,12 +1,10 @@
 /**
- * Config pública de telemetría (DSN de Sentry es write-only; no es un secreto de cuenta).
- * Dejar `sentryDsn` vacío desactiva el envío remoto — el código sigue siendo no-op seguro.
- *
- * Cómo activar: crear un proyecto Sentry (Browser) y pegar el DSN aquí.
+ * Defaults públicos (sin secretos). El DSN y overrides van en
+ * `telemetry.secrets.js` (gitignored) o se inyectan en CI desde GitHub Secrets.
  * Ver docs/TELEMETRY.md.
  */
 export default {
-  /** @type {string} */
+  /** Siempre vacío en git. Se sobrescribe vía secrets / inject. */
   sentryDsn: '',
 
   /** Release tag visible en Sentry (alinear con package.json / tag v*). */

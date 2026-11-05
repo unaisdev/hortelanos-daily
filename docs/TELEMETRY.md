@@ -37,13 +37,42 @@ Contexto común en todos los envíos:
 
 Si en el futuro se añade un evento, **debe** documentarse en esta tabla antes de mergearlo.
 
-## Backend
+## Backend y secretos (no van a GitHub)
 
-Hoy: **Sentry** (proyecto Browser) vía envelope HTTP, sin SDK npm (el frontend es estático).
+Hoy: **Sentry** (proyecto Browser) vía envelope HTTP, sin SDK npm.
 
-1. Crear un proyecto Sentry → copiar el DSN.
-2. Pegarlo en `shared/telemetry.config.js` → `sentryDsn`.
-3. Si `sentryDsn` está vacío, **no se envía nada** (no-op seguro).
+**El DSN no se commitea.** Defaults públicos en `shared/telemetry.config.js` (`sentryDsn: ''`). El valor real entra solo por:
+
+| Modo | Cómo |
+|------|------|
+| Local | `.env` (gitignored) con `HORTELANO_SENTRY_DSN=…`, o copia `shared/telemetry.secrets.example.js` → `shared/telemetry.secrets.js` |
+| Inject | `npm run telemetry:inject` / automático en `serve` y `prepare:desktop-www` |
+| Release CI | GitHub Actions secret **`HORTELANO_SENTRY_DSN`** → `scripts/inject-telemetry-secrets.mjs` antes del build |
+
+Archivos que **nunca** deben subirse:
+
+- `shared/telemetry.secrets.js` (gitignore)
+- `.env` (gitignore)
+
+Sin DSN → **no se envía nada** (no-op seguro).
+
+> Nota: un DSN de Sentry browser es write-only, pero igual preferimos no publicarlo en el repo. En el binario/release desktop queda embebido en el frontend (inevitable en cliente); lo que evitamos es exponerlo en el historial de git.
+
+### Activar en local
+
+```sh
+cp .env.example .env
+# edita HORTELANO_SENTRY_DSN=
+npm run serve
+```
+
+### Activar en releases
+
+1. Crear proyecto Sentry (Browser).
+2. Repo → **Settings → Secrets and variables → Actions** → New secret:
+   - Name: `HORTELANO_SENTRY_DSN`
+   - Value: el DSN
+3. El workflow `release-launcher` inyecta el secret al construir. Sin el secret, los builds salen con telemetría apagada.
 
 En Sentry:
 

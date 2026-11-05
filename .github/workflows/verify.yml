@@ -16,6 +16,18 @@ jobs:
           scripts/verify-protocol.sh games/dailygold
           scripts/verify-protocol.sh games/dailyred
 
+      - name: Ensure telemetry secrets are not committed
+        run: |
+          if [ -f shared/telemetry.secrets.js ]; then
+            echo "shared/telemetry.secrets.js must not be in the repo (gitignored secrets only)"
+            exit 1
+          fi
+          if grep -RInE "sentryDsn:\s*'https?://" shared/telemetry.config.js shared/telemetry.secrets.example.js; then
+            echo "DSN must not be hardcoded in committed config files"
+            exit 1
+          fi
+          echo "telemetry secrets check OK"
+
   tauri-check:
     runs-on: ubuntu-latest
     steps:

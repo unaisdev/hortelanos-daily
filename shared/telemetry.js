@@ -2,8 +2,21 @@
  * Telemetría mínima del launcher (uso + ROM + errores).
  * Extensible: añade nombres en EVENTS y llama a track() desde shell/runner.
  * Contrato público: docs/TELEMETRY.md
+ *
+ * El DSN no vive en git: se mergea desde `telemetry.secrets.js` (local/CI inject).
  */
-import config from './telemetry.config.js';
+import defaults from './telemetry.config.js';
+
+async function loadSecrets() {
+  try {
+    const mod = await import('./telemetry.secrets.js');
+    return mod?.default && typeof mod.default === 'object' ? mod.default : {};
+  } catch {
+    return {};
+  }
+}
+
+const config = { ...defaults, ...(await loadSecrets()) };
 
 /** Eventos de producto versionados. Solo estos (más errores) se envían. */
 export const EVENTS = Object.freeze({
