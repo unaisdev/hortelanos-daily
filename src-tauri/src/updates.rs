@@ -12,7 +12,7 @@ use crate::packs::{self, CatalogGame, ContentPointer, PackStatus};
 use crate::paths;
 
 const LAUNCHER_REPO: &str = "unaisdev/hortelanos-daily";
-const USER_AGENT: &str = "hortelanos-daily/1.0.0";
+const USER_AGENT: &str = "hortelanos-daily/1.1.0";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,6 +36,7 @@ pub struct ContentUpdateInfo {
     pub asset_name: Option<String>,
     pub sha256: Option<String>,
     pub html_url: Option<String>,
+    pub notes: Option<String>,
     pub reason: String,
 }
 
@@ -130,6 +131,7 @@ async fn check_one_content(app: &AppHandle, game: &CatalogGame) -> AppResult<Con
             asset_name: None,
             sha256: None,
             html_url: None,
+            notes: None,
             reason: "sin puntero de content en catálogo".into(),
         });
     };
@@ -148,6 +150,7 @@ async fn check_one_content(app: &AppHandle, game: &CatalogGame) -> AppResult<Con
             asset_name: Some(content.asset.clone()),
             sha256: None,
             html_url: Some(format!("https://github.com/{}/releases", content.repo)),
+            notes: None,
             reason: "el repo fuente aún no tiene Releases".into(),
         });
     }
@@ -191,6 +194,7 @@ async fn check_one_content(app: &AppHandle, game: &CatalogGame) -> AppResult<Con
         asset_name: asset.map(|a| a.name.clone()).or_else(|| Some(content.asset.clone())),
         sha256,
         html_url: Some(release.html_url),
+        notes: release.body,
         reason: if asset.is_none() {
             format!("Release sin asset {}", content.asset)
         } else {

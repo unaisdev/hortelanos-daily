@@ -20,6 +20,12 @@ const updateBar = document.getElementById('update-bar');
 const updateStatus = document.getElementById('update-status');
 const updateBtn = document.getElementById('update-btn');
 const updateLauncherBtn = document.getElementById('update-launcher-btn');
+const changelogBtn = document.getElementById('changelog-btn');
+const changelogFoot = document.getElementById('changelog-foot');
+const changelogFootBtn = document.getElementById('changelog-foot-btn');
+const changelogModal = document.getElementById('changelog-modal');
+const changelogModalClose = document.getElementById('changelog-modal-close');
+const changelogModalBody = document.getElementById('changelog-modal-body');
 const menuHelp = document.getElementById('menu-help');
 const helpFab = document.getElementById('help-fab');
 const helpModal = document.getElementById('help-modal');
@@ -194,10 +200,13 @@ function showMenu() {
   shell.dataset.screen = 'menu';
   renderList();
   if (isDesktop()) {
+    if (changelogFoot) changelogFoot.hidden = false;
     syncUpdatesOnOpen().catch((err) => {
       console.warn('syncUpdatesOnOpen', err);
       setUpdateStatus('Desktop · updates no disponibles');
       if (updateBar) updateBar.hidden = false;
+      if (changelogBtn) changelogBtn.hidden = false;
+      paintChangelogTriggers(false);
     });
   }
 }
@@ -340,6 +349,135 @@ function pendingContentUpdates(list = contentUpdates) {
   return list.filter((c) => c.updateAvailable && c.downloadUrl);
 }
 
+function hasPendingUpdates(pendingContent = pendingContentUpdates()) {
+  return Boolean(launcherUpdate?.updateAvailable) || pendingContent.length > 0;
+}
+
+function paintChangelogTriggers(hasUpdate = hasPendingUpdates()) {
+  const flag = hasUpdate ? '1' : '0';
+  const label = hasUpdate ? 'Hay novedades' : 'Novedades';
+  if (changelogBtn) {
+    changelogBtn.hidden = false;
+    changelogBtn.dataset.hasUpdate = flag;
+    changelogBtn.textContent = label;
+  }
+  if (changelogFootBtn) {
+    changelogFootBtn.dataset.hasUpdate = flag;
+    changelogFootBtn.textContent = label;
+  }
+  if (changelogFoot) changelogFoot.hidden = false;
+}
+
+function notesForDisplay(raw) {
+  if (!raw || !String(raw).trim()) return '';
+  let text = String(raw).replace(/\r\n/g, '\n').trim();
+  const match = text.match(/##\s*Novedades\s*\n([\s\S]*?)(?=\n##\s|$)/i);
+  if (match) {
+    text = match[1].trim();
+  } else {
+    // Bodies antiguos sin ## Novedades: quitar bloques técnicos.
+    text = text
+      .replace(/\n##\s*(Instalaci[oó]n|Descarga|Pack t[eé]cnico|Technical)\b[\s\S]*$/i, '')
+      .trim();
+  }
+
+  text = text
+    .replace(/^#+\s*/gm, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^[-*]\s+/gm, '• ')
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return true;
+      if (/^\(Rellena esto/i.test(t) || /^•\s*\(Rellena esto/i.test(t)) return false;
+      if (/sin firma|UNSIGNED_INSTALL|SHA256|content-v\*|checksum/i.test(t)) return false;
+      if (/Content packs de cada juego|publican en sus repos/i.test(t)) return false;
+      return true;
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return text;
+}
+
+function appendChangelogSection(container, { title, meta, notes, updateAvailable }) {
+  const section = document.createElement('section');
+  section.className = 'changelog-section';
+  section.dataset.update = updateAvailable ? '1' : '0';
+
+  const head = document.createElement('div');
+  head.className = 'changelog-section-head';
+
+  const h = document.createElement('h3');
+  h.className = 'changelog-section-title';
+  h.textContent = title;
+  head.appendChild(h);
+
+  if (meta) {
+    const m = document.createElement('p');
+    m.className = 'changelog-section-meta';
+    m.textContent = meta;
+    head.appendChild(m);
+  }
+  section.appendChild(head);
+
+  const body = notesForDisplay(notes);
+  if (body) {
+    const p = document.createElement('p');
+    p.className = 'changelog-notes';
+    p.textContent = body;
+    section.appendChild(p);
+  } else {
+    const empty = document.createElement('p');
+    empty.className = 'changelog-missing';
+    empty.textContent = 'Sin notas en este release.';
+    section.appendChild(empty);
+  }
+
+  container.appendChild(section);
+}
+
+function paintChangelogModal() {
+  if (!changelogModalBody) return;
+  changelogModalBody.replaceChildren();
+
+  if (!launcherUpdate && !contentUpdates.length) {
+    const p = document.createElement('p');
+    p.className = 'changelog-empty';
+    p.textContent = 'Aún no hay notas cargadas. Abre el menú en desktop para consultar GitHub.';
+    changelogModalBody.appendChild(p);
+    return;
+  }
+
+  if (launcherUpdate) {
+    const cur = launcherUpdate.currentVersion || '?';
+    const latest = launcherUpdate.latestVersion || cur;
+    const meta = launcherUpdate.updateAvailable
+      ? `v${cur} → v${latest}`
+      : `v${latest}`;
+    appendChangelogSection(changelogModalBody, {
+      title: 'Launcher',
+      meta,
+      notes: launcherUpdate.notes,
+      updateAvailable: Boolean(launcherUpdate.updateAvailable),
+    });
+  }
+
+  for (const c of contentUpdates) {
+    const local = c.localVersion || '?';
+    const remote = c.remoteVersion || local;
+    const meta = c.updateAvailable ? `content ${local} → ${remote}` : `content ${remote}`;
+    appendChangelogSection(changelogModalBody, {
+      title: c.name || c.gameId || 'Pack',
+      meta,
+      notes: c.notes,
+      updateAvailable: Boolean(c.updateAvailable),
+    });
+  }
+}
+
 function paintUpdateBar({ pendingContent = pendingContentUpdates(), autoNote = '' } = {}) {
   if (!updateBar) return;
   updateBar.hidden = false;
@@ -374,6 +512,9 @@ function paintUpdateBar({ pendingContent = pendingContentUpdates(), autoNote = '
       updateLauncherBtn.textContent = `Launcher ${launcherUpdate.latestVersion} → abrir release`;
     }
   }
+
+  paintChangelogTriggers(hasPendingUpdates(pendingContent));
+  paintChangelogModal();
 }
 
 async function refreshUpdates() {
@@ -382,6 +523,10 @@ async function refreshUpdates() {
   setUpdateStatus('Buscando updates en GitHub…');
   if (updateBtn) updateBtn.hidden = true;
   if (updateLauncherBtn) updateLauncherBtn.hidden = true;
+  if (changelogBtn) {
+    changelogBtn.hidden = false;
+    changelogBtn.textContent = 'Novedades';
+  }
 
   const [launcher, contents] = await Promise.all([
     checkLauncherUpdate(),
@@ -507,6 +652,11 @@ function onKey(event) {
     event.preventDefault();
     launchSelected();
   } else if (event.key === 'Escape') {
+    if (changelogModal?.open) {
+      event.preventDefault();
+      closeChangelogModal();
+      return;
+    }
     if (helpModal?.open) {
       event.preventDefault();
       closeHelpModal();
@@ -556,6 +706,7 @@ let helpJustClosed = false;
 
 function openHelpModal() {
   if (!helpModal) return;
+  if (changelogModal?.open) closeChangelogModal();
   if (typeof helpModal.showModal === 'function') helpModal.showModal();
   else helpModal.setAttribute('open', '');
 }
@@ -564,6 +715,20 @@ function closeHelpModal() {
   if (!helpModal) return;
   if (typeof helpModal.close === 'function') helpModal.close();
   else helpModal.removeAttribute('open');
+}
+
+function openChangelogModal() {
+  if (!changelogModal) return;
+  if (helpModal?.open) closeHelpModal();
+  paintChangelogModal();
+  if (typeof changelogModal.showModal === 'function') changelogModal.showModal();
+  else changelogModal.setAttribute('open', '');
+}
+
+function closeChangelogModal() {
+  if (!changelogModal) return;
+  if (typeof changelogModal.close === 'function') changelogModal.close();
+  else changelogModal.removeAttribute('open');
 }
 
 if (helpFab) {
@@ -578,7 +743,28 @@ if (helpModal) {
   });
   helpModal.addEventListener('close', () => {
     helpJustClosed = true;
-    queue(() => {
+    setTimeout(() => {
+      helpJustClosed = false;
+    }, 0);
+  });
+}
+
+if (changelogBtn) {
+  changelogBtn.addEventListener('click', () => openChangelogModal());
+}
+if (changelogFootBtn) {
+  changelogFootBtn.addEventListener('click', () => openChangelogModal());
+}
+if (changelogModalClose) {
+  changelogModalClose.addEventListener('click', () => closeChangelogModal());
+}
+if (changelogModal) {
+  changelogModal.addEventListener('click', (event) => {
+    if (event.target === changelogModal) closeChangelogModal();
+  });
+  changelogModal.addEventListener('close', () => {
+    helpJustClosed = true;
+    setTimeout(() => {
       helpJustClosed = false;
     }, 0);
   });

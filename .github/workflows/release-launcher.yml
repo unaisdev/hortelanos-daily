@@ -60,10 +60,15 @@ jobs:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
           releaseName: Hortelano's Daily ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
           releaseBody: |
-            Builds **sin firma de código**. Ver `docs/UNSIGNED_INSTALL.md` y `SHA256SUMS`.
+            ## Novedades
 
-            - **Windows portable:** `*-x64-portable.zip` (descomprimir y ejecutar, sin instalar).
-            - Content packs de cada juego se publican en sus repos (`content-v*`).
+            - Ahora puedes ver las novedades del launcher y de los juegos desde el menú, sin salir a GitHub.
+            - Si hay algo nuevo, el botón Novedades se destaca para que no se te pase.
+            - Las notas se escriben en castellano claro, solo con lo que un jugador puede notar.
+
+            ## Descarga
+
+            - En Windows: baja el zip portable, descomprímelo y ábrelo. No hace falta instalar nada.
           releaseDraft: true
           includeUpdaterJson: false
           args: ${{ matrix.args }}
