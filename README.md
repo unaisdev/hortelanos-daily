@@ -45,8 +45,9 @@ Necesitas Rust (`rustup`) además de Node:
 
 ```sh
 npm install
-npm run desktop:dev     # ventana nativa
-npm run desktop:build   # instaladores en src-tauri/target/release/bundle/
+npm run desktop:dev          # ventana nativa como «Hortelanos Daily (Debug)»
+npm run desktop:build        # producción → src-tauri/target/release/bundle/
+npm run desktop:build:debug  # instalable debug (nombre e identifier distintos)
 ```
 
 - Builds **unsigned** por plataforma (macOS / Windows / Ubuntu). Guía: [docs/UNSIGNED_INSTALL.md](docs/UNSIGNED_INSTALL.md).
