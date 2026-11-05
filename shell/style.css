@@ -720,18 +720,33 @@ body {
   filter: brightness(1.06);
 }
 
+.changelog-modal {
+  position: fixed;
+  inset: 0;
+  width: fit-content;
+  height: fit-content;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  margin: auto;
+  overflow: hidden;
+}
+
 .changelog-modal-card {
-  width: min(440px, 100%);
-  max-height: min(70vh, 560px);
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .changelog-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   gap: 14px;
-  max-height: min(55vh, 440px);
-  padding-right: 2px;
+  overscroll-behavior: contain;
 }
 
 .changelog-section {
