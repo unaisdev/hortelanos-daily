@@ -7,6 +7,13 @@ import {
   resultFor, currentStreaks, markBattleStarted, recordResult, settleAbandonedGame,
 } from './daily.js';
 import { createStatsDiskMirror } from '../shell/desktop.js';
+import {
+  initTelemetry,
+  setTelemetryContext,
+  track,
+  captureException,
+  EVENTS,
+} from '../shared/telemetry.js';
 
 const $ = (id) => document.getElementById(id);
 const app = document.querySelector('.app');
@@ -192,12 +199,20 @@ async function startRun() {
     battleSeen = false;
     pollTimer = setInterval(watchGame, 500);
     setState('playing');
+    track(EVENTS.GAME_LAUNCH, {
+      gameId: manifest.id || gameId,
+      content_version: manifest.contentVersion || 'unknown',
+      protocol_id: manifest.protocolId || 'unknown',
+      launcher_version: resolveLauncherVersion(),
+      practice: Boolean(practiceSeed),
+    });
   } catch (err) {
     console.error(err);
     stopEmulator();
     const hint = err instanceof TypeError ? ' Comprueba tu conexión e inténtalo de nuevo.' : '';
     ui.errorText.textContent = `${err?.message || err}${hint}`;
     setState('error');
+    captureException(err, { where: 'startRun', gameId: gameId || null });
   } finally {
     starting = false;
   }
@@ -240,6 +255,7 @@ function onClick(button, handler) {
         console.error(err);
         ui.errorText.textContent = err?.message || String(err);
         setState('error');
+        captureException(err, { where: 'ui-click', gameId: gameId || null });
       });
   });
 }
@@ -337,11 +353,36 @@ dpad.addEventListener('pointermove', (event) => {
 dpad.addEventListener('pointerup', () => setDirection(null));
 dpad.addEventListener('pointercancel', () => setDirection(null));
 
+let launcherVersion = null;
+
+function resolveLauncherVersion() {
+  return launcherVersion || 'unknown';
+}
+
+async function loadLauncherVersion() {
+  try {
+    const res = await fetch(new URL('../catalog/catalog.json', import.meta.url));
+    if (!res.ok) return null;
+    const catalog = await res.json();
+    return catalog?.launcher?.version || null;
+  } catch {
+    return null;
+  }
+}
+
 async function boot() {
+  initTelemetry({ surface: 'runner', gameId });
+  launcherVersion = await loadLauncherVersion();
+  if (launcherVersion) setTelemetryContext({ launcherVersion });
+
   packBase = new URL(`../games/${gameId}/`, import.meta.url).href;
   const res = await fetch(new URL('game.manifest.json', packBase));
   if (!res.ok) throw new Error(`No se encontró el pack «${gameId}».`);
   manifest = await res.json();
+  setTelemetryContext({
+    gameId: manifest.id || gameId,
+    launcherVersion: launcherVersion || undefined,
+  });
 
   const compat = checkGameCompat(manifest);
   if (!compat.ok) {
@@ -349,6 +390,7 @@ async function boot() {
     ui.errorText.textContent = compat.message;
     setState('error');
     ui.retry.hidden = true;
+    captureException(new Error(compat.message), { where: 'compat', gameId: manifest.id || gameId });
     return;
   }
 
@@ -392,4 +434,5 @@ boot()
     console.error(err);
     ui.errorText.textContent = err?.message || String(err);
     setState('error');
+    captureException(err, { where: 'boot', gameId: gameId || null });
   });

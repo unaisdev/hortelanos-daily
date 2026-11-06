@@ -9,6 +9,12 @@ import {
   openExternalUrl,
   errorText,
 } from './desktop.js';
+import {
+  initTelemetry,
+  setTelemetryContext,
+  trackLauncherOpenOnce,
+  captureException,
+} from '../shared/telemetry.js';
 
 const bootLog = document.getElementById('boot-log');
 const bootSection = document.getElementById('boot');
@@ -49,6 +55,7 @@ const LINES = [
 
 let games = [];
 let catalogReady = false;
+let catalogLauncherVersion = null;
 let selected = 0;
 let booting = true;
 let bootTimer = null;
@@ -57,6 +64,7 @@ let launcherUpdate = null;
 let desktopInfo = null;
 let skipRequested = false;
 let updateBusy = false;
+let launcherOpenTimer = null;
 
 const SKIP_BOOT_KEY = 'hortelano:skip-boot';
 const SELECTED_GAME_KEY = 'hortelano:selected-game';
@@ -147,9 +155,41 @@ async function loadCatalogFromFetch() {
     } catch (err) {
       reason = errorText(err) || 'pack inválido';
     }
-    enriched.push({ ...entry, manifest, playable, reason });
+    enriched.push({
+      ...entry,
+      contentVersion: manifest?.contentVersion || entry.contentVersion,
+      manifest,
+      playable,
+      reason,
+    });
   }
   return { ...catalog, games: enriched };
+}
+
+function resolveLauncherVersion() {
+  return desktopInfo?.launcherVersion
+    || launcherUpdate?.currentVersion
+    || catalogLauncherVersion
+    || null;
+}
+
+function romVersionsPayload(list = games) {
+  return list
+    .map((g) => {
+      const ver = g.manifest?.contentVersion || g.contentVersion || '?';
+      return `${g.id}:${ver}`;
+    })
+    .join(',');
+}
+
+function reportLauncherOpen() {
+  const version = resolveLauncherVersion();
+  if (version) setTelemetryContext({ launcherVersion: version });
+  trackLauncherOpenOnce({
+    launcher_version: version || 'unknown',
+    games_available: games.filter((g) => g.playable).length,
+    roms: romVersionsPayload(),
+  });
 }
 
 /** Overlay app-data pack status from Rust when IPC works; never blocks the menu. */
@@ -199,10 +239,14 @@ function showMenu() {
   if (helpFab) helpFab.hidden = false;
   shell.dataset.screen = 'menu';
   renderList();
+  // Desktop: preferimos reportar tras enrich (versiones instaladas); fallback si IPC falla.
+  clearTimeout(launcherOpenTimer);
+  launcherOpenTimer = setTimeout(reportLauncherOpen, isDesktop() ? 1500 : 0);
   if (isDesktop()) {
     if (changelogFoot) changelogFoot.hidden = false;
     syncUpdatesOnOpen().catch((err) => {
       console.warn('syncUpdatesOnOpen', err);
+      captureException(err, { where: 'syncUpdatesOnOpen' });
       setUpdateStatus('Desktop · updates no disponibles');
       if (updateBar) updateBar.hidden = false;
       if (changelogBtn) changelogBtn.hidden = false;
@@ -584,6 +628,7 @@ async function syncUpdatesOnOpen() {
     menuStatus.textContent = 'Packs listos para jugar.';
   } catch (err) {
     menuStatus.textContent = errorText(err);
+    captureException(err, { where: 'syncUpdatesOnOpen.install' });
     setUpdateStatus('Fallo al actualizar packs — pulsa U para reintentar');
     if (updateBtn) {
       updateBtn.hidden = false;
@@ -618,6 +663,7 @@ async function applyUpdates() {
     menuStatus.textContent = 'Packs actualizados.';
   } catch (err) {
     menuStatus.textContent = errorText(err);
+    captureException(err, { where: 'applyUpdates' });
     setUpdateStatus('Fallo al actualizar packs');
   }
 }
@@ -783,20 +829,43 @@ if (skipBoot) {
   bootLog.textContent = 'Loading catalog.json ..\n';
 }
 
+initTelemetry({ surface: 'shell', platform: isDesktop() ? 'desktop' : 'web' });
+
 loadCatalogFromFetch()
   .then(async (catalog) => {
     games = catalog.games;
+    catalogLauncherVersion = catalog.launcher?.version || null;
     catalogReady = true;
+    if (catalogLauncherVersion) {
+      setTelemetryContext({ launcherVersion: catalogLauncherVersion });
+    }
     restoreSelectedIndex();
     whenDesktopReady(800)
       .then(() => enrichFromDesktop({ games }))
       .then((enriched) => {
+        if (desktopInfo?.launcherVersion) {
+          setTelemetryContext({
+            platform: 'desktop',
+            launcherVersion: desktopInfo.launcherVersion,
+          });
+        } else if (isDesktop()) {
+          setTelemetryContext({
+            platform: 'desktop',
+            launcherVersion: catalogLauncherVersion,
+          });
+        }
         if (!enriched?.games?.length) return;
         games = enriched.games;
         restoreSelectedIndex();
-        if (shell.dataset.screen === 'menu') renderList();
+        if (shell.dataset.screen === 'menu') {
+          renderList();
+          clearTimeout(launcherOpenTimer);
+          reportLauncherOpen();
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (shell.dataset.screen === 'menu') reportLauncherOpen();
+      });
 
     if (skipBoot) {
       clearSkipBoot();
@@ -812,4 +881,5 @@ loadCatalogFromFetch()
     bootLog.textContent += `FATAL: ${text}\n`;
     setBootHint(text);
     catalogReady = false;
+    captureException(err, { where: 'loadCatalog' });
   });
