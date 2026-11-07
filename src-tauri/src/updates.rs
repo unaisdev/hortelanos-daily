@@ -12,7 +12,7 @@ use crate::packs::{self, CatalogGame, ContentPointer, PackStatus};
 use crate::paths;
 
 const LAUNCHER_REPO: &str = "unaisdev/hortelanos-daily";
-const USER_AGENT: &str = "hortelanos-daily/1.1.0";
+const USER_AGENT: &str = "hortelanos-daily/1.1.1";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
