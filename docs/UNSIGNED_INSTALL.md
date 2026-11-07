@@ -1,13 +1,24 @@
 # Instalación sin certificados
 
-Hortelano's Daily se distribuye **sin firma de código**. El sistema operativo avisará; es esperado.
+Hortelano's Daily se distribuye **sin firma de Apple / Microsoft**. El sistema avisará; es esperado.
+No significa que el archivo esté corrupto.
 
 ## macOS (Gatekeeper)
 
-1. Descarga el `.dmg` o `.app` desde GitHub Releases.
-2. Si macOS bloquea: clic derecho → **Abrir** → **Abrir**.
-3. Alternativa Terminal: `xattr -dr com.apple.quarantine "/ruta/Hortelanos Daily.app"`.
-4. Comprueba el hash con `SHA256SUMS` del Release.
+1. Descarga el `.dmg` de **tu chip** desde GitHub Releases:
+   - Apple Silicon (M1/M2/M3/…): `*_aarch64.dmg`
+   - Intel: busca el dmg/x64 si está publicado (hoy CI publica `aarch64` en `macos-latest`).
+2. Abre el DMG y arrastra **Hortelanos Daily** a Aplicaciones.
+3. Si macOS dice que está **dañada** o no se puede abrir:
+   - Clic derecho en la app → **Abrir** → **Abrir** (no hagas doble clic la primera vez).
+   - O en Terminal:
+     ```sh
+     xattr -dr com.apple.quarantine "/Applications/Hortelanos Daily.app"
+     open "/Applications/Hortelanos Daily.app"
+     ```
+4. Comprueba el hash con `SHA256SUMS` del Release si quieres.
+
+Nota técnica: el build firma la app en ad-hoc (`signingIdentity: "-"`). Sin eso, macOS marca el `.app` como dañado aunque el DMG esté bien.
 
 ## Windows (SmartScreen)
 

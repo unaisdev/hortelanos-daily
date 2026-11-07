@@ -62,16 +62,46 @@ jobs:
           releaseBody: |
             ## Novedades
 
+            - Arreglado en Mac: la app ya no aparece como «dañada» al abrirla (firma ad-hoc correcta).
             - Ahora puedes ver las novedades del launcher y de los juegos desde el menú, sin salir a GitHub.
             - Si hay algo nuevo, el botón Novedades se destaca para que no se te pase.
-            - Las notas se escriben en castellano claro, solo con lo que un jugador puede notar.
 
             ## Descarga
 
+            - En Mac: abre el `.dmg`, arrastra la app a Aplicaciones. Si macOS avisa, clic derecho → Abrir → Abrir (o `xattr -dr com.apple.quarantine` sobre la app).
             - En Windows: baja el zip portable, descomprímelo y ábrelo. No hace falta instalar nada.
           releaseDraft: true
           includeUpdaterJson: false
           args: ${{ matrix.args }}
+
+      - name: Verify macOS ad-hoc signature
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          # Prefer verifying the shipped DMG (tauri may clean the .app after bundling).
+          DMG=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' | head -1 || true)
+          APP=$(find src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1 || true)
+          MOUNT=""
+          cleanup() {
+            if [ -n "$MOUNT" ]; then hdiutil detach "$MOUNT" -force >/dev/null 2>&1 || true; fi
+          }
+          trap cleanup EXIT
+          if [ -n "$DMG" ]; then
+            echo "Mounting $DMG"
+            ATTACH_OUT=$(hdiutil attach -nobrowse -readonly "$DMG")
+            MOUNT=$(printf '%s\n' "$ATTACH_OUT" | python3 -c "import sys; lines=sys.stdin.read().splitlines();
+print(next((l[l.find('/Volumes/'):].strip() for l in reversed(lines) if '/Volumes/' in l), ''))")
+            APP="$MOUNT/Hortelanos Daily.app"
+          fi
+          if [ -z "${APP:-}" ] || [ ! -d "$APP" ]; then
+            echo "No macOS .app found to verify" >&2
+            exit 1
+          fi
+          echo "Verifying: $APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv --verbose=2 "$APP"
+          test -f "$APP/Contents/_CodeSignature/CodeResources"
+          echo "macOS ad-hoc signature OK"
 
       - name: Package Windows portable ZIP
         if: runner.os == 'Windows'
