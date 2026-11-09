@@ -39,6 +39,12 @@ Ver [docs/PROTOCOL.md](docs/PROTOCOL.md). Hoy: `dailyred-conf-v2+status-v1`.
 
 Orden al cambiar el contrato: **adapter en launcher → Release launcher → content pack**.
 
+## Telemetría y errores
+
+El launcher puede enviar **uso agregado** (aperturas, qué ROM se juega) y **errores** a Sentry, sin tracking de clics. Detalle: [docs/TELEMETRY.md](docs/TELEMETRY.md).
+
+El DSN **no va en git**. Local: `.env` (`HORTELANO_SENTRY_DSN`) o `shared/telemetry.secrets.js`. Releases: secret de GitHub Actions `HORTELANO_SENTRY_DSN`. Sin DSN = desactivado.
+
 ## Escritorio (Tauri 2)
 
 Necesitas Rust (`rustup`) además de Node:

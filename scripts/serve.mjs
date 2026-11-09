@@ -1,5 +1,6 @@
 // Static server for Hortelano's Daily (shell + runner + games + catalog).
 //   node scripts/serve.mjs [port]
+import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
@@ -7,6 +8,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const port = Number(process.argv[2] || process.env.PORT || 8787);
+
+spawnSync(process.execPath, [join(root, 'scripts', 'inject-telemetry-secrets.mjs')], {
+  cwd: root,
+  stdio: 'inherit',
+});
 
 const types = {
   '.html': 'text/html; charset=utf-8',

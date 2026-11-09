@@ -51,11 +51,21 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      - name: Inject telemetry secrets (from GitHub Actions secret)
+        env:
+          HORTELANO_SENTRY_DSN: ${{ secrets.HORTELANO_SENTRY_DSN }}
+          HORTELANO_TELEMETRY_ENV: production
+          HORTELANO_TELEMETRY_RELEASE: hortelanos-daily@${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+        run: node scripts/inject-telemetry-secrets.mjs
+
       - name: Build Tauri (unsigned)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          HORTELANO_SENTRY_DSN: ${{ secrets.HORTELANO_SENTRY_DSN }}
+          HORTELANO_TELEMETRY_ENV: production
+          HORTELANO_TELEMETRY_RELEASE: hortelanos-daily@${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
           releaseName: Hortelano's Daily ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
@@ -126,7 +136,7 @@ jobs:
             "src-tauri/target/release",
             "desktop-www"
           )
-          $required = @('shell','runner','catalog','games')
+          $required = @('shell','runner','shared','catalog','games')
           $optional = @('docs','index.html')
           $copied = @{}
           foreach ($root in $assetRoots) {
