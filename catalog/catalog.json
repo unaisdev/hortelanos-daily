@@ -3,7 +3,7 @@
   "launcher": {
     "id": "hortelanos-daily",
     "name": "Hortelano's Daily",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "minProtocolAdapters": [
       "dailyred-conf-v2+status-v1"
     ]
@@ -13,7 +13,7 @@
       "id": "dailygold",
       "name": "Daily Gold",
       "boss": "GOLD",
-      "blurb": "Un combate al día contra GOLD.",
+      "blurb": "Un combate al d\u00eda contra GOLD.",
       "contentVersion": "0.1.0",
       "protocolId": "dailyred-conf-v2+status-v1",
       "packPath": "games/dailygold",
@@ -33,7 +33,7 @@
       "id": "dailyred",
       "name": "Daily Red",
       "boss": "RED",
-      "blurb": "Un combate al día contra RED en la cima del monte.",
+      "blurb": "Un combate al d\u00eda contra RED en la cima del monte.",
       "contentVersion": "0.1.0",
       "protocolId": "dailyred-conf-v2+status-v1",
       "packPath": "games/dailyred",
