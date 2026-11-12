@@ -1,9 +1,11 @@
 // Boots a headless emulator long enough to read the generated party for a seed,
 // then exits. Results are cached so date browsing stays snappy after the first load.
+//
+// Protocol helpers (injectConfig / createGameLink) come from the launcher protocol
+// adapter via configureArchiveParty — do not import standalone web rom-config /
+// game-link modules here (they are not part of this repo).
 import { Nostalgist } from './vendor/nostalgist.js';
 import { loadGameFiles } from './game-files.js';
-import { injectConfig } from './rom-config.js';
-import { createGameLink } from './game-link.js';
 import { decodeParty } from './party-decode.js';
 
 const STATE_EWRAM = 0x21000;
@@ -13,11 +15,17 @@ const memoryCache = new Map();
 let inflight = null;
 let symbolsPromise = null;
 
+function notConfigured(name) {
+  return () => {
+    throw new Error(`configureArchiveParty() must set ${name} before loading archive parties`);
+  };
+}
+
 let options = {
   symbolsUrl: 'game/symbols.json',
   loadFiles: () => loadGameFiles(),
-  injectConfig,
-  createGameLink,
+  injectConfig: notConfigured('injectConfig'),
+  createGameLink: notConfigured('createGameLink'),
   romFileName: 'dailyred.gba',
   cacheKey: CACHE_KEY,
 };
