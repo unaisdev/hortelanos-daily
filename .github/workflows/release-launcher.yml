@@ -62,9 +62,9 @@ jobs:
           releaseBody: |
             ## Novedades
 
-            - Arreglado en Mac: la app ya no aparece como danada al abrirla (firma ad-hoc correcta).
-            - Ahora puedes ver las novedades del launcher y de los juegos desde el menu, sin salir a GitHub.
-            - Si hay algo nuevo, el boton Novedades se destaca para que no se te pase.
+            - Al pasar el raton por el altavoz puedes ajustar el volumen; al entrar suena al 25%.
+            - En Daily Gold puedes ver y practicar con los equipos de dias pasados (hasta ayer), sin gastar el intento del dia.
+            - Controles de teclado fijados a la guia (X = A, Z = B, etc.).
 
             ## Descarga
 

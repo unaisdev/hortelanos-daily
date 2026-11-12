@@ -28,40 +28,77 @@
     </header>
 
     <section class="console" id="console" aria-label="Juego">
-      <div class="bezel">
-        <div class="screen" id="screen">
-          <div class="card card-title">
-            <div class="snow" aria-hidden="true"></div>
-            <img class="red-sprite" id="boss-sprite" width="64" height="64" alt="">
-            <dl class="stats">
-              <div><dt>Victorias</dt><dd id="stat-wins">0</dd></div>
-              <div><dt>Derrotas</dt><dd id="stat-losses">0</dd></div>
-              <div><dt>Racha de victorias</dt><dd id="stat-win-streak">0</dd></div>
-              <div><dt>Racha diaria</dt><dd id="stat-day-streak">0</dd></div>
-            </dl>
-            <button class="button button-play" id="play" type="button">Jugar</button>
-            <div class="played" id="played" hidden>
-              <p class="played-result" id="played-result"></p>
-              <p class="played-next" id="played-next"></p>
+      <div class="stage">
+        <div class="toolbar" role="group" aria-label="Controles de pantalla">
+          <div class="sound-control">
+            <button class="icon-button" id="sound" type="button" aria-label="Volumen" aria-expanded="false" aria-controls="volume-panel" disabled>
+              <svg class="icon icon-sound-on" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 9v6h3l5 4V5L7 9H4zm11.5 3a3.5 3.5 0 0 0-1.8-3.1v6.2A3.5 3.5 0 0 0 15.5 12zm-1.8-7.4v2.1a5.5 5.5 0 0 1 0 10.6v2.1a7.5 7.5 0 0 0 0-14.8z"/>
+              </svg>
+              <svg class="icon icon-sound-off" viewBox="0 0 24 24" aria-hidden="true" hidden>
+                <path d="M4 9v6h3l5 4V5L7 9H4zm12.7-3.3-1.4 1.4 2.1 2.1-2.1 2.1 1.4 1.4 2.1-2.1 2.1 2.1 1.4-1.4-2.1-2.1 2.1-2.1-1.4-1.4-2.1 2.1-2.1-2.1z"/>
+              </svg>
+            </button>
+            <div class="volume-panel" id="volume-panel">
+              <label class="volume-label" for="volume">
+                <span class="visually-hidden">Volumen</span>
+                <input class="volume-slider" id="volume" type="range" min="0" max="100" step="1" value="25">
+              </label>
+              <output class="volume-value" id="volume-value" for="volume">25</output>
             </div>
-            <p class="card-note" id="practice-note" hidden>Partida de práctica: no se guardan los resultados.</p>
           </div>
-          <div class="card card-loading" role="status" aria-live="polite">
-            <p class="card-heading" id="loading-text">Descargando el juego</p>
-            <div class="meter"><div class="meter-fill" id="meter"></div></div>
-            <p class="card-note" id="loading-detail"></p>
-          </div>
-          <div class="card card-error" role="alert">
-            <p class="card-heading">No se ha podido iniciar el juego</p>
-            <p class="card-note" id="error-text"></p>
-            <button class="button button-play" id="retry" type="button">Reintentar</button>
+          <button class="icon-button" id="fullscreen" type="button" aria-label="Pantalla completa" disabled>
+            <svg class="icon icon-fs-enter" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+            <svg class="icon icon-fs-exit" viewBox="0 0 24 24" aria-hidden="true" hidden>
+              <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="bezel">
+          <div class="screen" id="screen">
+            <div class="card card-title">
+              <div class="snow" aria-hidden="true"></div>
+              <img class="red-sprite" id="boss-sprite" width="64" height="64" alt="">
+              <dl class="stats">
+                <div><dt>Victorias</dt><dd id="stat-wins">0</dd></div>
+                <div><dt>Derrotas</dt><dd id="stat-losses">0</dd></div>
+                <div><dt>Racha de victorias</dt><dd id="stat-win-streak">0</dd></div>
+                <div><dt>Racha diaria</dt><dd id="stat-day-streak">0</dd></div>
+              </dl>
+              <button class="button button-play" id="play" type="button">Jugar</button>
+              <div class="played" id="played" hidden>
+                <p class="played-result" id="played-result"></p>
+                <p class="played-next" id="played-next"></p>
+              </div>
+              <p class="card-note" id="practice-note" hidden>Partida de práctica: no se guardan los resultados.</p>
+            </div>
+            <div class="card card-loading" role="status" aria-live="polite">
+              <p class="card-heading" id="loading-text">Descargando el juego</p>
+              <div class="meter"><div class="meter-fill" id="meter"></div></div>
+              <p class="card-note" id="loading-detail"></p>
+            </div>
+            <div class="card card-error" role="alert">
+              <p class="card-heading">No se ha podido iniciar el juego</p>
+              <p class="card-note" id="error-text"></p>
+              <button class="button button-play" id="retry" type="button">Reintentar</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="toolbar">
-        <button class="button button-quiet" id="sound" type="button" aria-pressed="false" disabled>Silenciar</button>
-        <button class="button button-quiet" id="fullscreen" type="button" disabled>Pantalla completa</button>
+        <aside class="guide" aria-label="Teclado">
+          <h2 class="guide-heading">Teclado</h2>
+          <dl class="keys">
+            <div><dt><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></dt><dd>Mover</dd></div>
+            <div><dt><kbd>X</kbd></dt><dd>A · confirmar</dd></div>
+            <div><dt><kbd>Z</kbd></dt><dd>B · cancelar</dd></div>
+            <div><dt><kbd>Enter</kbd></dt><dd>Inicio</dd></div>
+            <div><dt><kbd>⇧</kbd></dt><dd>Seleccionar</dd></div>
+          </dl>
+          <p class="guide-note">En móvil, usa los botones bajo la pantalla.</p>
+        </aside>
       </div>
 
       <div class="pad" aria-label="Controles táctiles">
@@ -83,15 +120,17 @@
       </div>
     </section>
 
-    <section class="guide">
-      <h2 class="guide-heading">Teclado</h2>
-      <dl class="keys">
-        <div><dt><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></dt><dd>Caminar y mover el cursor</dd></div>
-        <div><dt><kbd>X</kbd></dt><dd>Botón A: hablar y confirmar</dd></div>
-        <div><dt><kbd>Z</kbd></dt><dd>Botón B: volver y cancelar</dd></div>
-        <div><dt><kbd>Enter</kbd></dt><dd>Inicio: abrir el menú</dd></div>
-        <div><dt><kbd>Mayús derecha</kbd></dt><dd>Seleccionar</dd></div>
-      </dl>
+    <section class="archive" id="archive" aria-label="Equipos pasados" hidden>
+      <h2 class="guide-heading">Equipos pasados</h2>
+      <p class="archive-lead">El equipo de hoy solo está en el emulador de arriba. Aquí puedes ver y practicar con fechas ya cerradas (hasta ayer). Esas partidas no gastan el intento diario ni guardan resultado.</p>
+      <div class="archive-controls">
+        <label class="archive-date-label" for="archive-date">Fecha</label>
+        <input class="archive-date" id="archive-date" type="date" required>
+        <button class="button button-quiet" id="archive-preview" type="button">Ver equipo</button>
+        <button class="button button-run" id="archive-fight" type="button" disabled>Luchar</button>
+      </div>
+      <p class="archive-status" id="archive-status" hidden></p>
+      <ul class="archive-team" id="archive-team" hidden></ul>
     </section>
 
     <footer class="footer">
