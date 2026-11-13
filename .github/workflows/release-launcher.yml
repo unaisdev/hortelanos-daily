@@ -62,10 +62,10 @@ jobs:
           releaseBody: |
             ## Novedades
 
-            - Ranking diario compartido: si ganas Daily Gold puedes salir en la lista del dia con tu @ de Instagram.
-            - Al entrar a jugar el launcher te explica el ranking y te deja unirte o seguir sin el.
-            - Solo puedes cambiar de @ dos veces al dia.
-            - El menu enseña quien ha ganado hoy y tu sesion de ranking a un lado.
+            - Si ganas Daily Gold puedes salir en el ranking del dia con tu @ de Instagram.
+            - Es opcional: puedes unirte o jugar sin aparecer en la lista.
+            - Puedes cambiar tu @ como maximo dos veces al dia.
+            - En el menu ves quien ha ganado hoy.
 
             ## Descarga
 
