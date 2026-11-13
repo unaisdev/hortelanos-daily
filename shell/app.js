@@ -20,6 +20,8 @@ import {
   setInstagramDeclined,
 } from '../shared/ranking-ui.js';
 
+window.__hortelanoShellReady = true;
+
 const bootLog = document.getElementById('boot-log');
 const bootSection = document.getElementById('boot');
 const menuSection = document.getElementById('menu');

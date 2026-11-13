@@ -62,10 +62,8 @@ jobs:
           releaseBody: |
             ## Novedades
 
-            - Si ganas Daily Gold puedes salir en el ranking del dia con tu @ de Instagram.
-            - Es opcional: puedes unirte o jugar sin aparecer en la lista.
-            - Puedes cambiar tu @ como maximo dos veces al dia.
-            - En el menu ves quien ha ganado hoy.
+            - Arreglado en Windows: el portable ya no se queda colgado en la pantalla de carga.
+            - Sigue ahi el ranking diario con tu @ de Instagram (opcional).
 
             ## Descarga
 
@@ -127,7 +125,8 @@ jobs:
             "src-tauri/target/release",
             "desktop-www"
           )
-          $required = @('shell','runner','catalog','games')
+          # shared/ is required since 2.0.0 (shell + runner import ranking modules from it).
+          $required = @('shell','runner','shared','catalog','games')
           $optional = @('docs','index.html')
           $copied = @{}
           foreach ($root in $assetRoots) {
@@ -149,6 +148,10 @@ jobs:
           if (-not (Test-Path $shellIndex)) {
             throw "Portable pack incomplete: shell/index.html missing"
           }
+          $sharedRanking = Join-Path $stage "shared/ranking-ui.js"
+          if (-not (Test-Path $sharedRanking)) {
+            throw "Portable pack incomplete: shared/ranking-ui.js missing"
+          }
 
           # Sidecar DLLs if present (WebView2 loader, etc.)
           Get-ChildItem "src-tauri/target/release/*.dll" -ErrorAction SilentlyContinue |
@@ -159,7 +162,7 @@ jobs:
             "====================================",
             "1. Unzip this folder anywhere.",
             "2. Run Hortelanos Daily.exe.",
-            "3. Keep shell/, runner/, catalog/, games/ next to the exe (same folder).",
+            "3. Keep shell/, runner/, shared/, catalog/, games/ next to the exe (same folder).",
             "4. Needs Microsoft Edge WebView2 (usually already on Windows 10/11).",
             "5. Unsigned build: SmartScreen -> More info -> Run anyway."
           ) -join "`n"
@@ -170,11 +173,14 @@ jobs:
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path $stage -DestinationPath $zip -Force
 
-          # Sanity: zip must include shell + runner, not just the exe
+          # Sanity: zip must include shell + shared modules, not just the exe
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $entries = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip)).Entries.FullName
           if (-not ($entries | Where-Object { $_ -match 'shell[/\\]index\.html$' })) {
             throw "Portable ZIP missing shell/index.html"
+          }
+          if (-not ($entries | Where-Object { $_ -match 'shared[/\\]ranking-ui\.js$' })) {
+            throw "Portable ZIP missing shared/ranking-ui.js"
           }
           Write-Host "Portable entries: $($entries.Count)"
           gh release upload "$env:RELEASE_TAG" $zip --clobber
