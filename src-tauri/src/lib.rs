@@ -6,7 +6,31 @@ mod stats;
 mod updates;
 
 use serde_json::Value;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, LogicalSize, Manager, Size, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+
+/// Prefer a roomy 3-column launcher when the display allows it.
+fn fit_main_window(window: &WebviewWindow) {
+    const TARGET_W: f64 = 1320.0;
+    const TARGET_H: f64 = 860.0;
+    const MIN_W: f64 = 980.0;
+    const MIN_H: f64 = 700.0;
+    const MARGIN_W: f64 = 48.0;
+    const MARGIN_H: f64 = 72.0;
+
+    let (mut width, mut height) = (TARGET_W, TARGET_H);
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let scale = monitor.scale_factor();
+        let size = monitor.size();
+        let avail_w = (size.width as f64 / scale) - MARGIN_W;
+        let avail_h = (size.height as f64 / scale) - MARGIN_H;
+        width = TARGET_W.min(avail_w).max(MIN_W.min(avail_w));
+        height = TARGET_H.min(avail_h).max(MIN_H.min(avail_h));
+    }
+
+    let _ = window.set_min_size(Some(Size::Logical(LogicalSize::new(MIN_W, MIN_H))));
+    let _ = window.set_size(Size::Logical(LogicalSize::new(width, height)));
+    let _ = window.center();
+}
 
 use crate::error::AppResult;
 use crate::packs::PackStatus;
@@ -96,6 +120,10 @@ pub fn run() {
             // Seed app-data from bundled packs so updates have a writable tree.
             let _ = updates::seed_bundled_packs(&handle);
 
+            if let Some(window) = app.get_webview_window("main") {
+                fit_main_window(&window);
+            }
+
             // `tauri dev` already serves via beforeDevCommand (scripts/serve.mjs on :8787).
             // Release builds need our embedded static server + navigation.
             if cfg!(debug_assertions) {
@@ -111,10 +139,12 @@ pub fn run() {
                     std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("{e}"))
                 })?);
             } else {
-                WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse()?))
+                let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse()?))
                     .title("Hortelano's Daily")
-                    .inner_size(980.0, 740.0)
+                    .inner_size(1320.0, 860.0)
+                    .min_inner_size(980.0, 700.0)
                     .build()?;
+                fit_main_window(&window);
             }
             Ok(())
         })

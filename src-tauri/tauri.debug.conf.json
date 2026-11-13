@@ -6,8 +6,10 @@
       {
         "label": "main",
         "title": "Hortelano's Daily (Debug)",
-        "width": 980,
-        "height": 740,
+        "width": 1320,
+        "height": 860,
+        "minWidth": 980,
+        "minHeight": 700,
         "resizable": true,
         "fullscreen": false
       }

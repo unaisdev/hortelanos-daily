@@ -152,7 +152,7 @@ a { color: inherit; text-underline-offset: 3px; }
   color: #b9c8d5;
 }
 
-/* Tarjeta inicial: Gold, las estadísticas y el botón Jugar o el resultado del día. */
+/* Tarjeta inicial: Gold, stats y jugar/resultado. */
 .card-title { gap: 4.5cqh; padding: 4cqh; }
 
 .red-sprite {

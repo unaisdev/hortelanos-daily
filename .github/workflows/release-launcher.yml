@@ -62,9 +62,10 @@ jobs:
           releaseBody: |
             ## Novedades
 
-            - Al pasar el raton por el altavoz puedes ajustar el volumen; al entrar suena al 25%.
-            - En Daily Gold puedes ver y practicar con los equipos de dias pasados (hasta ayer), sin gastar el intento del dia.
-            - Controles de teclado fijados a la guia (X = A, Z = B, etc.).
+            - Ranking diario compartido: si ganas Daily Gold puedes salir en la lista del dia con tu @ de Instagram.
+            - Al entrar a jugar el launcher te explica el ranking y te deja unirte o seguir sin el.
+            - Solo puedes cambiar de @ dos veces al dia.
+            - El menu enseña quien ha ganado hoy y tu sesion de ranking a un lado.
 
             ## Descarga
 

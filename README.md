@@ -37,6 +37,10 @@ Stats y semillas van **aisladas por juego** (`hortelano:dailygold:stats`, `daily
 
 Ver [docs/PROTOCOL.md](docs/PROTOCOL.md). Hoy: `dailyred-conf-v2+status-v1`.
 
+## Ranking diario
+
+Lista compartida de quién ha ganado hoy en Daily Gold (`@` de Instagram + Cloudflare Workers Free). Ver [docs/RANKING.md](docs/RANKING.md) y [`services/ranking-api/README.md`](services/ranking-api/README.md).
+
 Orden al cambiar el contrato: **adapter en launcher → Release launcher → content pack**.
 
 ## Escritorio (Tauri 2)

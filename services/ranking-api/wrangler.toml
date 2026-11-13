@@ -1,0 +1,18 @@
+# Hortelanos Daily ranking — stay on Workers Free (no paid plan).
+# After `wrangler d1 create hortelanos-daily-ranking`, paste database_id below.
+
+name = "hortelanos-daily-ranking"
+main = "src/index.js"
+compatibility_date = "2025-11-01"
+workers_dev = true
+preview_urls = false
+
+# Optional secret later: wrangler secret put SUBMIT_SECRET
+# [vars]
+# ALLOWED_ORIGINS = "*"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hortelanos-daily-ranking"
+database_id = "eca9b63a-3714-4c58-bf0e-9c478dc6d8c8"
+migrations_dir = "migrations"

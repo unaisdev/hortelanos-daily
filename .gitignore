@@ -5,9 +5,12 @@ pokefirered/
 dist/
 desktop-www/shell/
 desktop-www/runner/
+desktop-www/shared/
 desktop-www/catalog/
 desktop-www/games/
 desktop-www/docs/
+services/ranking-api/node_modules/
+services/ranking-api/.wrangler/
 src-tauri/target/
 src-tauri/icons/android/
 src-tauri/icons/ios/
