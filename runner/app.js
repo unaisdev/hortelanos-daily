@@ -9,6 +9,11 @@ import {
 import { createStatsDiskMirror } from '../shell/desktop.js';
 import { previewTeamForSeed } from './team-preview.js';
 import { configureArchiveParty, loadArchiveParty, peekArchiveParty } from './archive-party.js';
+import {
+  promptInstagramIfNeeded,
+  rankingEnabled,
+  submitWin,
+} from '../shared/ranking-ui.js';
 
 const $ = (id) => document.getElementById(id);
 const app = document.querySelector('.app');
@@ -155,6 +160,28 @@ function renderTitle() {
   updateCountdown();
 }
 
+let winSubmitPending = null;
+
+/** Publish win to shared ranking (UI lives in the launcher only). */
+async function publishWinIfNeeded(date, won) {
+  if (!won || practiceSeed || !gameId) return;
+  if (!(await rankingEnabled(gameId))) return;
+  if (winSubmitPending === date) return;
+  winSubmitPending = date;
+  try {
+    const handle = await promptInstagramIfNeeded();
+    if (!handle) return;
+    await submitWin({
+      gameId,
+      playDate: date,
+      seed: dailySeed(date),
+      instagram: handle,
+    });
+  } catch (err) {
+    console.warn('ranking submit failed', err);
+  }
+}
+
 function formatTime(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const pad = (n) => String(n).padStart(2, '0');
@@ -268,7 +295,12 @@ function watchGame() {
     endDailyGame(0);
     return;
   }
-  if (status.result !== RESULT.NONE) recordResult(stats, runDate, status.result === RESULT.WON);
+  if (status.result !== RESULT.NONE) {
+    const won = status.result === RESULT.WON;
+    const before = resultFor(stats, runDate);
+    recordResult(stats, runDate, won);
+    if (!before && won) publishWinIfNeeded(runDate, true);
+  }
   if (status.phase === PHASE.FINISHED) endDailyGame(1000);
 }
 

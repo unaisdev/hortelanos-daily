@@ -1,0 +1,17 @@
+{
+  "name": "hortelanos-daily-ranking-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Worker + D1 ranking API for Hortelano's Daily (Free plan)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create hortelanos-daily-ranking",
+    "db:migrate:local": "wrangler d1 migrations apply hortelanos-daily-ranking --local",
+    "db:migrate:remote": "wrangler d1 migrations apply hortelanos-daily-ranking --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

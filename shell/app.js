@@ -9,6 +9,16 @@ import {
   openExternalUrl,
   errorText,
 } from './desktop.js';
+import {
+  formatInstagram,
+  loadInstagram,
+  loadInstagramDeclined,
+  loadRankingInto,
+  rankingEnabled,
+  saveInstagram,
+  setIdentity,
+  setInstagramDeclined,
+} from '../shared/ranking-ui.js';
 
 const bootLog = document.getElementById('boot-log');
 const bootSection = document.getElementById('boot');
@@ -36,6 +46,27 @@ const displayBoss = document.getElementById('display-boss');
 const displayBlurb = document.getElementById('display-blurb');
 const displayMeta = document.getElementById('display-meta');
 const displayRepo = document.getElementById('display-repo');
+const igInput = document.getElementById('ig-input');
+const igSave = document.getElementById('ig-save');
+const igStatus = document.getElementById('ig-status');
+const igCard = document.getElementById('ig-card');
+const igCardHandle = document.getElementById('ig-card-handle');
+const igForm = document.getElementById('ig-form');
+const igCta = document.getElementById('ig-cta');
+const igCtaOpen = document.getElementById('ig-cta-open');
+const igEdit = document.getElementById('ig-edit');
+const igOnboardModal = document.getElementById('ig-onboard-modal');
+const igOnboardInput = document.getElementById('ig-onboard-input');
+const igOnboardStatus = document.getElementById('ig-onboard-status');
+const igOnboardYes = document.getElementById('ig-onboard-yes');
+const igOnboardNo = document.getElementById('ig-onboard-no');
+const igOnboardSave = document.getElementById('ig-onboard-save');
+const igOnboardBack = document.getElementById('ig-onboard-back');
+const igOnboardRetry = document.getElementById('ig-onboard-retry');
+const igOnboardSkip = document.getElementById('ig-onboard-skip');
+const rankingPanel = document.getElementById('ranking-panel');
+const rankingBoard = document.getElementById('ranking-board');
+const rankingStatus = document.getElementById('ranking-status');
 
 const LINES = [
   'HORTELANO BIOS v1.0',
@@ -241,6 +272,227 @@ function repoUrlFor(game) {
 const GITHUB_ICON_SVG =
   '<svg class="gh-icon" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 0 1 8 4.07c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>';
 
+function localToday() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+let igOnboardResolver = null;
+let igOnboardMode = 'launch'; // 'launch' | 'menu'
+let igEditing = false;
+
+function hideIgPanels() {
+  if (igCard) igCard.hidden = true;
+  if (igCta) igCta.hidden = true;
+  if (igForm) igForm.hidden = true;
+}
+
+function showIgSession(handle) {
+  igEditing = false;
+  hideIgPanels();
+  if (igCardHandle) igCardHandle.textContent = formatInstagram(handle);
+  if (igCard) igCard.hidden = false;
+  if (igInput) igInput.value = handle;
+}
+
+function showIgCta() {
+  igEditing = false;
+  hideIgPanels();
+  if (igCta) igCta.hidden = false;
+}
+
+function showIgForm(prefill = '') {
+  igEditing = true;
+  hideIgPanels();
+  if (igForm) igForm.hidden = false;
+  if (igInput) {
+    igInput.value = prefill;
+    queueMicrotask(() => igInput.focus());
+  }
+}
+
+function syncIgUi(statusText = '') {
+  igEditing = false;
+  const saved = loadInstagram();
+  if (saved) showIgSession(saved);
+  else if (loadInstagramDeclined()) showIgCta();
+  else hideIgPanels();
+  if (igStatus) igStatus.textContent = statusText || '';
+}
+
+function setIgOnboardStep(step) {
+  igOnboardModal?.querySelectorAll('[data-ig-step]').forEach((el) => {
+    el.hidden = el.getAttribute('data-ig-step') !== step;
+  });
+  if (igOnboardStatus) igOnboardStatus.textContent = '';
+  if (step === 'input') {
+    queueMicrotask(() => igOnboardInput?.focus());
+  }
+}
+
+function closeIgOnboard(result) {
+  const resolve = igOnboardResolver;
+  igOnboardResolver = null;
+  if (igOnboardModal?.open) igOnboardModal.close();
+  if (resolve) resolve(result);
+}
+
+function openIgOnboard({ mode = 'launch' } = {}) {
+  if (!igOnboardModal) return Promise.resolve({ joined: false, skipped: true });
+  if (igOnboardResolver) return Promise.resolve({ joined: Boolean(loadInstagram()), skipped: false });
+  igOnboardMode = mode;
+  if (igOnboardInput) igOnboardInput.value = '';
+  if (igOnboardSave) {
+    igOnboardSave.disabled = false;
+    igOnboardSave.textContent = mode === 'launch' ? 'Guardar y jugar' : 'Guardar';
+  }
+  setIgOnboardStep('ask');
+  return new Promise((resolve) => {
+    igOnboardResolver = resolve;
+    if (!igOnboardModal.open) igOnboardModal.showModal();
+  });
+}
+
+async function persistInstagram(raw, { statusEl, saveBtn, playLabel = false } = {}) {
+  const handle = saveInstagram(raw || '');
+  if (!handle) {
+    if (statusEl) statusEl.textContent = 'Handle inválido (letras, números, . y _).';
+    return { ok: false, error: 'invalid' };
+  }
+  if (statusEl) statusEl.textContent = 'Guardando…';
+  if (saveBtn) saveBtn.disabled = true;
+  try {
+    const identity = await setIdentity({ instagram: handle });
+    if (!identity.ok) {
+      if (identity.error === 'rename_limit') {
+        const left = identity.renames_left ?? 0;
+        const current = identity.instagram
+          ? saveInstagram(identity.instagram)
+          : loadInstagram();
+        if (statusEl) {
+          statusEl.textContent = `Solo 2 cambios de @ al día. Te quedan ${left}.`;
+        }
+        if (current) {
+          setInstagramDeclined(false);
+          showIgSession(current);
+        }
+        return { ok: false, error: 'rename_limit', handle: current };
+      }
+      if (identity.disabled) {
+        setInstagramDeclined(false);
+        showIgSession(handle);
+        if (statusEl) statusEl.textContent = `Guardado local ${formatInstagram(handle)}`;
+        return { ok: true, handle, localOnly: true };
+      }
+      if (statusEl) statusEl.textContent = 'No se pudo registrar en el servidor. Reintenta.';
+      return { ok: false, error: identity.error || 'server' };
+    }
+    setInstagramDeclined(false);
+    const left = identity.renames_left ?? 0;
+    if (statusEl) {
+      statusEl.textContent = playLabel
+        ? `Listo ${formatInstagram(handle)}`
+        : identity.changed
+          ? `Sesión ${formatInstagram(handle)} · ${left} cambios restantes hoy`
+          : `Sesión ${formatInstagram(handle)}`;
+    }
+    showIgSession(handle);
+    refreshShellRanking();
+    return { ok: true, handle };
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
+}
+
+function finishIgDeclined() {
+  setInstagramDeclined(true);
+  showIgCta();
+  if (igStatus) igStatus.textContent = 'Puedes unirte al ranking cuando quieras.';
+  closeIgOnboard({ joined: false, skipped: true });
+}
+
+function initPlayerIg() {
+  if (!igCard && !igCta && !igForm) return;
+  syncIgUi('');
+
+  igSave?.addEventListener('click', () => {
+    void persistInstagram(igInput?.value || '', { statusEl: igStatus, saveBtn: igSave });
+  });
+  igInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void persistInstagram(igInput?.value || '', { statusEl: igStatus, saveBtn: igSave });
+    }
+  });
+  igEdit?.addEventListener('click', () => {
+    showIgForm(loadInstagram() || '');
+    if (igStatus) igStatus.textContent = 'Máximo 2 cambios de @ por día.';
+  });
+  igCtaOpen?.addEventListener('click', () => {
+    void openIgOnboard({ mode: 'menu' }).then((result) => {
+      if (result?.joined) syncIgUi(`Sesión ${formatInstagram(loadInstagram())}`);
+      else syncIgUi(igStatus?.textContent || '');
+    });
+  });
+
+  igOnboardYes?.addEventListener('click', () => setIgOnboardStep('input'));
+  igOnboardNo?.addEventListener('click', () => setIgOnboardStep('second'));
+  igOnboardRetry?.addEventListener('click', () => setIgOnboardStep('input'));
+  igOnboardBack?.addEventListener('click', () => setIgOnboardStep('ask'));
+  igOnboardSkip?.addEventListener('click', () => finishIgDeclined());
+  igOnboardSave?.addEventListener('click', () => {
+    void (async () => {
+      const result = await persistInstagram(igOnboardInput?.value || '', {
+        statusEl: igOnboardStatus,
+        saveBtn: igOnboardSave,
+        playLabel: igOnboardMode === 'launch',
+      });
+      if (!result.ok) return;
+      if (igOnboardSave) {
+        igOnboardSave.textContent = igOnboardMode === 'launch' ? 'Entrando…' : 'Guardado';
+      }
+      closeIgOnboard({ joined: true, skipped: false, handle: result.handle });
+    })();
+  });
+  igOnboardInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      igOnboardSave?.click();
+    }
+  });
+  igOnboardModal?.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    const visible = igOnboardModal.querySelector('[data-ig-step]:not([hidden])');
+    const step = visible?.getAttribute('data-ig-step');
+    if (step === 'ask') setIgOnboardStep('second');
+    else if (step === 'input') setIgOnboardStep('ask');
+    else finishIgDeclined();
+  });
+}
+
+async function ensureIgBeforeLaunch(gameId) {
+  if (!(await rankingEnabled(gameId))) return { joined: false, skipped: true };
+  if (loadInstagram()) return { joined: true, skipped: false };
+  return openIgOnboard({ mode: 'launch' });
+}
+
+let rankingRequest = 0;
+
+async function refreshShellRanking() {
+  const game = games[selected];
+  if (!rankingPanel || !rankingBoard) return;
+  if (!game || !(await rankingEnabled(game.id))) {
+    rankingPanel.hidden = true;
+    return;
+  }
+  const requestId = ++rankingRequest;
+  await loadRankingInto(rankingBoard, rankingStatus, game.id, localToday(), {
+    modalTitle: `${game.name} · hoy`,
+  });
+  if (requestId !== rankingRequest) return;
+}
+
 function renderDisplay() {
   const game = games[selected];
   if (!game || !displayName) return;
@@ -274,6 +526,8 @@ function renderDisplay() {
       displayRepo.innerHTML = '';
     }
   }
+
+  refreshShellRanking();
 }
 
 function renderList() {
@@ -309,7 +563,7 @@ function renderList() {
     }
     li.addEventListener('click', () => {
       if (selected === index) {
-        launchSelected();
+        void launchSelected();
         return;
       }
       selected = index;
@@ -320,7 +574,7 @@ function renderList() {
   renderDisplay();
 }
 
-function launchSelected() {
+async function launchSelected() {
   const game = games[selected];
   if (!game) return;
   if (!game.playable) {
@@ -332,7 +586,9 @@ function launchSelected() {
     menuStatus.textContent = `${game.name}: ${game.reason}. Ver docs/PROTOCOL.md y Releases del repo fuente.`;
     return;
   }
+  if (igOnboardModal?.open) return;
   menuStatus.textContent = '';
+  await ensureIgBeforeLaunch(game.id);
   try {
     sessionStorage.setItem(SELECTED_GAME_KEY, game.id);
     sessionStorage.setItem(SKIP_BOOT_KEY, '1');
@@ -633,6 +889,14 @@ async function openLauncherRelease() {
   menuStatus.textContent = 'Descarga el build de tu SO (unsigned) e instálalo / descomprime el portable.';
 }
 
+function isTypingTarget(el) {
+  if (!el || !(el instanceof Element)) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (el.isContentEditable) return true;
+  return Boolean(el.closest?.('input, textarea, select, [contenteditable="true"]'));
+}
+
 function onKey(event) {
   if (booting && (event.key === 'Enter' || event.key === ' ')) {
     event.preventDefault();
@@ -641,6 +905,8 @@ function onKey(event) {
   }
   if (shell.dataset.screen !== 'menu') return;
   if (!games.length) return;
+  // Don't steal U / arrows / Enter while editing Instagram (or any field).
+  if (isTypingTarget(event.target) || isTypingTarget(document.activeElement)) return;
   if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
     event.preventDefault();
     selected = (selected + 1) % games.length;
@@ -651,8 +917,12 @@ function onKey(event) {
     renderList();
   } else if (event.key === 'Enter') {
     event.preventDefault();
-    launchSelected();
+    void launchSelected();
   } else if (event.key === 'Escape') {
+    if (igOnboardModal?.open) {
+      // Native dialog cancel handler manages the ranking onboarding steps.
+      return;
+    }
     if (changelogModal?.open) {
       event.preventDefault();
       closeChangelogModal();
@@ -772,6 +1042,8 @@ if (changelogModal) {
 }
 
 window.addEventListener('keydown', onKey);
+
+initPlayerIg();
 
 // Fetch catalog first (never blocked by Tauri IPC). Desktop ready / enrich is best-effort.
 const skipBoot = shouldSkipBoot();

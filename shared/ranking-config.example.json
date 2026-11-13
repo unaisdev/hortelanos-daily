@@ -1,0 +1,7 @@
+{
+  "apiUrl": "https://hortelanos-daily-ranking.hortelanos-daily.workers.dev",
+  "games": ["dailygold"],
+  "seedPrefixes": {
+    "dailygold": "dailyoro:"
+  }
+}

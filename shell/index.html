@@ -116,6 +116,67 @@
     </div>
   </dialog>
 
+  <dialog class="help-modal ig-onboard-modal" id="ig-onboard-modal" aria-labelledby="ig-onboard-title">
+    <div class="help-modal-card ig-onboard-card">
+      <div class="ig-onboard-step" data-ig-step="ask">
+        <header class="help-modal-head">
+          <h2 id="ig-onboard-title">Ranking del día</h2>
+        </header>
+        <div class="help-modal-body">
+          <p class="ig-onboard-copy">
+            Si ganas hoy, puedes aparecer en la lista compartida con tu
+            <strong>@ de Instagram</strong>. Es opcional y solo sirve para el ranking de Hortelanos Daily.
+          </p>
+          <p class="ig-onboard-note">Puedes cambiarlo como máximo 2 veces al día.</p>
+          <div class="ig-onboard-actions">
+            <button type="button" class="ig-onboard-primary" id="ig-onboard-yes">Sí, poner mi @</button>
+            <button type="button" class="ig-onboard-secondary" id="ig-onboard-no">Ahora no</button>
+          </div>
+        </div>
+      </div>
+      <div class="ig-onboard-step" data-ig-step="input" hidden>
+        <header class="help-modal-head">
+          <h2>Tu Instagram</h2>
+        </header>
+        <div class="help-modal-body">
+          <label class="player-ig-label" for="ig-onboard-input">Usuario (sin https)</label>
+          <div class="player-ig-row">
+            <span class="player-ig-at" aria-hidden="true">@</span>
+            <input
+              class="player-ig-input"
+              id="ig-onboard-input"
+              type="text"
+              maxlength="30"
+              autocomplete="username"
+              spellcheck="false"
+              placeholder="usuario"
+              inputmode="text"
+            >
+          </div>
+          <p class="ig-onboard-status" id="ig-onboard-status" role="status"></p>
+          <div class="ig-onboard-actions">
+            <button type="button" class="ig-onboard-primary" id="ig-onboard-save">Guardar y jugar</button>
+            <button type="button" class="ig-onboard-secondary" id="ig-onboard-back">Volver</button>
+          </div>
+        </div>
+      </div>
+      <div class="ig-onboard-step" data-ig-step="second" hidden>
+        <header class="help-modal-head">
+          <h2>¿Seguro?</h2>
+        </header>
+        <div class="help-modal-body">
+          <p class="ig-onboard-copy">
+            Sin @ no saldrás en el ranking del día aunque ganes. Puedes unirte más tarde desde el launcher.
+          </p>
+          <div class="ig-onboard-actions">
+            <button type="button" class="ig-onboard-primary" id="ig-onboard-retry">Vale, pongo mi @</button>
+            <button type="button" class="ig-onboard-secondary" id="ig-onboard-skip">Jugar sin ranking</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <main class="shell" data-screen="boot" id="shell">
     <section class="crt" id="boot" aria-live="polite">
       <pre class="boot-log" id="boot-log"></pre>
@@ -125,30 +186,45 @@
     <section class="menu" id="menu" hidden>
       <div class="menu-layout">
         <header class="menu-head">
-          <p class="eyebrow">CARTRIDGE SELECT</p>
+          <div class="brand-socials">
+            <p class="socials-hint">Sígueme en mis redes</p>
+            <nav class="socials" aria-label="Redes de Hortelano">
+              <a class="social" href="https://www.youtube.com/@elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="YouTube @elhortelanoo">
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.5 31.5 0 0 0 0 12a31.5 31.5 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.5 31.5 0 0 0 24 12a31.5 31.5 0 0 0-.5-5.8zM9.8 15.5v-7l6.3 3.5-6.3 3.5z"/></svg>
+                <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en YouTube</em></span>
+              </a>
+              <a class="social" href="https://www.instagram.com/elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="Instagram @elhortelanoo">
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-3.3-.1-4.8-1.7-4.9-4.9-.1-1.3-.1-1.7-.1-4.9s0-3.6.1-4.9C2.3 4 3.9 2.4 7.1 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.2 0-3.5 0-4.8.1-2.2.1-3.3 1.2-3.3 3.3-.1 1.2-.1 1.6-.1 4.7s0 3.5.1 4.7c.1 2.2 1.2 3.2 3.3 3.3 1.3.1 1.6.1 4.8.1s3.5 0 4.7-.1c2.2-.1 3.3-1.2 3.4-3.3.1-1.2.1-1.6.1-4.7s0-3.5-.1-4.7c-.1-2.2-1.2-3.2-3.4-3.3-1.2-.1-1.5-.1-4.7-.1zm0 3.2a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.3-8.4a1.2 1.2 0 1 1-2.3 0 1.2 1.2 0 0 1 2.3 0z"/></svg>
+                <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en Instagram</em></span>
+              </a>
+              <a class="social" href="https://www.tiktok.com/@elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="TikTok @elhortelanoo">
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M21 8.2a7.4 7.4 0 0 1-4.3-1.4v7.3a6.1 6.1 0 1 1-5.2-6v3.1a3 3 0 1 0 2.1 2.9V2.1h3a4.4 4.4 0 0 0 4.4 4.4V8.2z"/></svg>
+                <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en TikTok</em></span>
+              </a>
+              <a class="social" href="https://x.com/elhortelanooo" target="_blank" rel="noopener noreferrer" aria-label="Twitter @elhortelanooo">
+                <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M18.2 2H21l-6.6 7.5L22 22h-6.2l-4.9-6.4L5.3 22H2.5l7-8L2 2h6.3l4.4 5.8L18.2 2zm-1.1 18h1.7L7 3.9H5.2L17.1 20z"/></svg>
+                <span class="social-tip"><strong>@elhortelanooo</strong><em>Sígueme en Twitter</em></span>
+              </a>
+            </nav>
+          </div>
           <div class="brand-row">
             <img class="brand-logo" src="assets/logo-hortelano.jpeg" width="320" height="320" alt="El Hortelano">
-            <div class="brand-socials">
-              <p class="socials-hint">Sígueme en mis redes</p>
-              <nav class="socials" aria-label="Redes de Hortelano">
-                <a class="social" href="https://www.youtube.com/@elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="YouTube @elhortelanoo">
-                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.5 31.5 0 0 0 0 12a31.5 31.5 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.5 31.5 0 0 0 24 12a31.5 31.5 0 0 0-.5-5.8zM9.8 15.5v-7l6.3 3.5-6.3 3.5z"/></svg>
-                  <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en YouTube</em></span>
-                </a>
-                <a class="social" href="https://www.instagram.com/elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="Instagram @elhortelanoo">
-                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-3.3-.1-4.8-1.7-4.9-4.9-.1-1.3-.1-1.7-.1-4.9s0-3.6.1-4.9C2.3 4 3.9 2.4 7.1 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.2 0-3.5 0-4.8.1-2.2.1-3.3 1.2-3.3 3.3-.1 1.2-.1 1.6-.1 4.7s0 3.5.1 4.7c.1 2.2 1.2 3.2 3.3 3.3 1.3.1 1.6.1 4.8.1s3.5 0 4.7-.1c2.2-.1 3.3-1.2 3.4-3.3.1-1.2.1-1.6.1-4.7s0-3.5-.1-4.7c-.1-2.2-1.2-3.2-3.4-3.3-1.2-.1-1.5-.1-4.7-.1zm0 3.2a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.3-8.4a1.2 1.2 0 1 1-2.3 0 1.2 1.2 0 0 1 2.3 0z"/></svg>
-                  <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en Instagram</em></span>
-                </a>
-                <a class="social" href="https://www.tiktok.com/@elhortelanoo" target="_blank" rel="noopener noreferrer" aria-label="TikTok @elhortelanoo">
-                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M21 8.2a7.4 7.4 0 0 1-4.3-1.4v7.3a6.1 6.1 0 1 1-5.2-6v3.1a3 3 0 1 0 2.1 2.9V2.1h3a4.4 4.4 0 0 0 4.4 4.4V8.2z"/></svg>
-                  <span class="social-tip"><strong>@elhortelanoo</strong><em>Sígueme en TikTok</em></span>
-                </a>
-                <a class="social" href="https://x.com/elhortelanooo" target="_blank" rel="noopener noreferrer" aria-label="Twitter @elhortelanooo">
-                  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M18.2 2H21l-6.6 7.5L22 22h-6.2l-4.9-6.4L5.3 22H2.5l7-8L2 2h6.3l4.4 5.8L18.2 2zm-1.1 18h1.7L7 3.9H5.2L17.1 20z"/></svg>
-                  <span class="social-tip"><strong>@elhortelanooo</strong><em>Sígueme en Twitter</em></span>
-                </a>
-              </nav>
-            </div>
+            <p class="love">Hecho con todo el corazón por Hortelano</p>
+            <footer class="site-foot">
+              <p class="changelog-foot" id="changelog-foot" hidden>
+                <button type="button" class="changelog-foot-btn" id="changelog-foot-btn" aria-haspopup="dialog" aria-controls="changelog-modal">
+                  Novedades
+                </button>
+              </p>
+              <p class="dev-credit">
+                Desarrollado por
+                <a href="https://github.com/unaisdev" target="_blank" rel="noopener noreferrer">unaisdev</a>
+              </p>
+              <p class="credits">
+                © 2026 El Hortelano · Fan project — not Nintendo.
+                Emerald opening used as backdrop.
+              </p>
+            </footer>
           </div>
         </header>
 
@@ -169,25 +245,57 @@
 
           <ul class="trainer-rail" id="game-list" role="listbox" aria-label="Entrenadores"></ul>
         </div>
+
+        <aside class="rank-stage" aria-label="Usuario y ranking">
+          <div class="player-ig" id="player-ig">
+            <div class="player-ig-card" id="ig-card" hidden>
+              <div class="player-ig-card-main">
+                <p class="player-ig-card-kicker">Sesión ranking</p>
+                <p class="player-ig-card-handle" id="ig-card-handle">@</p>
+              </div>
+              <button type="button" class="player-ig-edit" id="ig-edit" aria-label="Editar Instagram" title="Editar">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm14.71-9.04a1 1 0 0 0 0-1.41l-2.51-2.51a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 2z"/></svg>
+              </button>
+            </div>
+            <div class="player-ig-cta" id="ig-cta" hidden>
+              <div class="player-ig-cta-main">
+                <p class="player-ig-cta-kicker">Ranking opcional</p>
+                <p class="player-ig-cta-title">Sin sesión de Instagram</p>
+                <p class="player-ig-cta-copy">Si ganas, no saldrás en la lista del día. Puedes unirte cuando quieras.</p>
+              </div>
+              <button type="button" class="player-ig-cta-btn" id="ig-cta-open">Unirme al ranking</button>
+            </div>
+            <div class="player-ig-form" id="ig-form" hidden>
+              <label class="player-ig-label" for="ig-input">Tu Instagram (ranking)</label>
+              <div class="player-ig-row">
+                <span class="player-ig-at" aria-hidden="true">@</span>
+                <input
+                  class="player-ig-input"
+                  id="ig-input"
+                  type="text"
+                  maxlength="30"
+                  autocomplete="username"
+                  spellcheck="false"
+                  placeholder="usuario"
+                  inputmode="text"
+                >
+                <button type="button" class="player-ig-save" id="ig-save">Guardar</button>
+              </div>
+            </div>
+            <p class="player-ig-status" id="ig-status" role="status"></p>
+          </div>
+
+          <section class="ranking-panel" id="ranking-panel" hidden aria-label="Ranking diario">
+            <header class="ranking-head">
+              <h3 class="ranking-title">Han ganado hoy</h3>
+              <p class="ranking-status" id="ranking-status"></p>
+            </header>
+            <div class="ranking-board" id="ranking-board"></div>
+          </section>
+        </aside>
       </div>
 
       <p class="menu-status" id="menu-status" role="status"></p>
-      <footer class="site-foot">
-        <p class="love">Hecho con todo el corazón por Hortelano</p>
-        <p class="changelog-foot" id="changelog-foot" hidden>
-          <button type="button" class="changelog-foot-btn" id="changelog-foot-btn" aria-haspopup="dialog" aria-controls="changelog-modal">
-            Novedades
-          </button>
-        </p>
-        <p class="dev-credit">
-          Desarrollado por
-          <a href="https://github.com/unaisdev" target="_blank" rel="noopener noreferrer">unaisdev</a>
-        </p>
-        <p class="credits">
-          © 2026 El Hortelano · Fan project — not Nintendo.
-          Emerald opening used as backdrop.
-        </p>
-      </footer>
     </section>
   </main>
 </body>
