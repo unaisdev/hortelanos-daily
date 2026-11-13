@@ -8,6 +8,23 @@
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="assets/pokeball.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // If ES modules fail (e.g. portable zip missing shared/), surface it instead of a dead boot hint.
+    window.__hortelanoShellReady = false;
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        if (window.__hortelanoShellReady) return;
+        const log = document.getElementById('boot-log');
+        const hint = document.querySelector('.boot-hint');
+        if (log && !log.textContent.trim()) {
+          log.textContent = 'FATAL: no se pudo cargar shell/app.js (¿falta shared/ junto al exe?)\n';
+        }
+        if (hint) {
+          hint.textContent = 'Error al cargar el launcher. En Windows portable deja shell/, runner/, shared/, catalog/ y games/ junto al .exe.';
+        }
+      }, 3500);
+    });
+  </script>
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -180,7 +197,7 @@
   <main class="shell" data-screen="boot" id="shell">
     <section class="crt" id="boot" aria-live="polite">
       <pre class="boot-log" id="boot-log"></pre>
-      <p class="boot-hint">Pulsa Enter o haz clic para saltar</p>
+      <p class="boot-hint">Cargando…</p>
     </section>
 
     <section class="menu" id="menu" hidden>
