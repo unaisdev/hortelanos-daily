@@ -2,7 +2,7 @@
 
 Launcher de los **play-daily** (Daily Gold, Daily Red y futuros). Intro CRT → menú de cartuchos → runner mGBA WASM con protocolo versionado.
 
-No sustituye a [dailygold](https://github.com/unaisdev/dailygold) ni [dailyred](https://github.com/amoi-builds/dailyred): esos repos siguen siendo dueños de patches/ROM. Este proyecto **consume** sus content packs.
+No sustituye a [dailygold](https://github.com/unaisdev/dailygold) ni [dailyred](https://github.com/unaisdev/dailyred) (fork en español de [amoi-builds/dailyred](https://github.com/amoi-builds/dailyred)): esos repos siguen siendo dueños de patches/ROM. Este proyecto **consume** sus content packs.
 
 ## Inicio rápido (web, sin instalar nada raro)
 

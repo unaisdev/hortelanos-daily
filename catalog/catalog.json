@@ -44,7 +44,7 @@
         "mascot": "RED"
       },
       "content": {
-        "repo": "amoi-builds/dailyred",
+        "repo": "unaisdev/dailyred",
         "asset": "dailyred-content.zip",
         "tagPrefix": "content-v"
       }
