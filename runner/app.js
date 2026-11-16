@@ -507,11 +507,13 @@ function fightArchiveTeam() {
 async function initArchive() {
   if (!ui.archive) return;
   const archiveBase = new URL(`./archive/${gameId}/`, import.meta.url);
+  // Species sprites are shared by all games; ROM memory symbols are per pack.
+  const archiveIconsBase = new URL('./archive/dailygold/', import.meta.url);
   const symbolsUrl = new URL('symbols.json', archiveBase);
   try {
     const res = await fetch(symbolsUrl);
     if (!res.ok) throw new Error('sin archive');
-    archiveIconBase = archiveBase;
+    archiveIconBase = archiveIconsBase;
     configureArchiveParty({
       symbolsUrl: symbolsUrl.href,
       loadFiles: () => loadGameFiles(packBase, manifest.rom.path),
