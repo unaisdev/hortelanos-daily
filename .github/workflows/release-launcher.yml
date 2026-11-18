@@ -64,6 +64,9 @@ jobs:
 
             - Daily Red ahora está en español, como Daily Gold.
             - Daily Red estrena "Equipos pasados": mira el equipo de cualquier día anterior y practica contra él sin gastar el intento diario.
+            - Esta versión no se ha probado en Mac.
+
+            Créditos: basado en Daily Red de amoi-builds; tablas en español de Acimut/pokefirered; construido sobre pret/pokefirered.
 
             ## Descarga
 

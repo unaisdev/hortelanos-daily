@@ -1,12 +1,22 @@
-Daily Gold: software y contenido de terceros
-============================================
+Hortelano's Daily (launcher, Daily Red y Daily Gold): software y contenido de terceros
+=====================================================================================
 
-Pokémon FireRed (the ROM in game/)
+Pokémon FireRed (las ROM de games/dailyred/rom/ y games/dailygold/rom/)
   Built from pret/pokefirered (https://github.com/pret/pokefirered), a
-  decompilación comunitaria de Pokémon FireRed, con los cambios de Daily Gold.
+  decompilación comunitaria de Pokémon FireRed, con los cambios de Daily Red y
+  Daily Gold.
   Pokémon and all game content are © Nintendo, Creatures Inc. and GAME FREAK
   inc. Este es un proyecto de fans gratuito y no oficial, sin afiliación ni
   respaldo de esas compañías ni de The Pokémon Company.
+
+Daily Red (proyecto original)
+  Daily Red y Daily Gold se basan en Daily Red de amoi-builds:
+  https://github.com/amoi-builds/dailyred
+
+Tablas de texto en castellano (Daily Red y Daily Gold)
+  Tablas oficiales de Rojo Fuego (España) de Acimut/pokefirered, rama
+  pret_europe, commit 6651454608dcc61356b60c20154214d773689730:
+  https://github.com/Acimut/pokefirered
 
 mGBA libretro core (vendor/mgba_libretro.js, vendor/mgba_libretro.wasm)
   mGBA, de Vicki Pfau y colaboradores. Licencia Mozilla Public License 2.0:
