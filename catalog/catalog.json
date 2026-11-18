@@ -34,7 +34,7 @@
       "name": "Daily Red",
       "boss": "RED",
       "blurb": "Un combate al d\u00eda contra RED en la cima del monte.",
-      "contentVersion": "0.2.0",
+      "contentVersion": "0.2.1",
       "protocolId": "dailyred-conf-v2+status-v1",
       "packPath": "games/dailyred",
       "menu": {

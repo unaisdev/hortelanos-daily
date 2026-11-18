@@ -1,7 +1,7 @@
 {
   "id": "dailyred",
   "name": "Daily Red",
-  "contentVersion": "0.2.0",
+  "contentVersion": "0.2.1",
   "protocolId": "dailyred-conf-v2+status-v1",
   "rom": {
     "path": "rom/dailyred.gba.gz",
