@@ -14,7 +14,7 @@ Daily Red (proyecto original)
   https://github.com/amoi-builds/dailyred
 
 Tablas de texto en castellano (Daily Red y Daily Gold)
-  Tablas oficiales de Rojo Fuego (España) de Acimut/pokefirered, rama
+  Tablas en español basadas en Acimut/pokefirered, rama
   pret_europe, commit 6651454608dcc61356b60c20154214d773689730:
   https://github.com/Acimut/pokefirered
 
