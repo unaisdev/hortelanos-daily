@@ -3,7 +3,7 @@
   "launcher": {
     "id": "hortelanos-daily",
     "name": "Hortelano's Daily",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "minProtocolAdapters": [
       "dailyred-conf-v2+status-v1"
     ]
@@ -14,7 +14,7 @@
       "name": "Daily Gold",
       "boss": "GOLD",
       "blurb": "Un combate al d\u00eda contra GOLD.",
-      "contentVersion": "0.1.0",
+      "contentVersion": "0.1.17",
       "protocolId": "dailyred-conf-v2+status-v1",
       "packPath": "games/dailygold",
       "menu": {
@@ -34,7 +34,7 @@
       "name": "Daily Red",
       "boss": "RED",
       "blurb": "Un combate al d\u00eda contra RED en la cima del monte.",
-      "contentVersion": "0.1.0",
+      "contentVersion": "0.2.1",
       "protocolId": "dailyred-conf-v2+status-v1",
       "packPath": "games/dailyred",
       "menu": {
@@ -44,7 +44,7 @@
         "mascot": "RED"
       },
       "content": {
-        "repo": "amoi-builds/dailyred",
+        "repo": "unaisdev/dailyred",
         "asset": "dailyred-content.zip",
         "tagPrefix": "content-v"
       }

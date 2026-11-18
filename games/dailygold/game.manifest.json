@@ -1,7 +1,7 @@
 {
   "id": "dailygold",
   "name": "Daily Gold",
-  "contentVersion": "0.1.0",
+  "contentVersion": "0.1.17",
   "protocolId": "dailyred-conf-v2+status-v1",
   "rom": {
     "path": "rom/dailyred.gba.gz",
@@ -17,8 +17,13 @@
     "titleAsset": "assets/gold.png",
     "mutedKey": "hortelano:dailygold:muted"
   },
+  "archive": {
+    "symbols": "archive/symbols.json"
+  },
   "compat": {
     "minLauncherVersion": "0.1.0",
-    "runnerAdapters": ["dailyred-conf-v2+status-v1"]
+    "runnerAdapters": [
+      "dailyred-conf-v2+status-v1"
+    ]
   }
 }

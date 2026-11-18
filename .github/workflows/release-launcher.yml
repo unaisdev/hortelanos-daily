@@ -62,8 +62,11 @@ jobs:
           releaseBody: |
             ## Novedades
 
-            - Arreglado en Windows: el portable ya no se queda colgado en la pantalla de carga.
-            - Sigue ahi el ranking diario con tu @ de Instagram (opcional).
+            - Daily Red ahora está en español, como Daily Gold.
+            - Daily Red estrena "Equipos pasados": mira el equipo de cualquier día anterior y practica contra él sin gastar el intento diario.
+            - Esta versión no se ha probado en Mac.
+
+            Créditos: basado en Daily Red de amoi-builds; tablas en español basadas en Acimut/pokefirered; construido sobre pret/pokefirered.
 
             ## Descarga
 

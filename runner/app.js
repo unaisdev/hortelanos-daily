@@ -504,14 +504,31 @@ function fightArchiveTeam() {
   startRun();
 }
 
+// RAM addresses of the party (gPlayerParty…) depend on the exact ROM build, so
+// they must travel with the ROM: packs declare their own in manifest.archive.symbols.
+// runner/archive/<game>/symbols.json is only a fallback for packs that predate it
+// (it matches the ROM bundled with the launcher).
+async function findArchiveSymbols() {
+  const candidates = [];
+  if (manifest?.archive?.symbols) candidates.push(new URL(manifest.archive.symbols, packBase));
+  candidates.push(new URL(`./archive/${gameId}/symbols.json`, import.meta.url));
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return url;
+    } catch { /* try the next one */ }
+  }
+  return null;
+}
+
 async function initArchive() {
   if (!ui.archive) return;
-  const archiveBase = new URL(`./archive/${gameId}/`, import.meta.url);
-  const symbolsUrl = new URL('symbols.json', archiveBase);
+  // Species sprites are shared by all games.
+  const archiveIconsBase = new URL('./archive/dailygold/', import.meta.url);
   try {
-    const res = await fetch(symbolsUrl);
-    if (!res.ok) throw new Error('sin archive');
-    archiveIconBase = archiveBase;
+    const symbolsUrl = await findArchiveSymbols();
+    if (!symbolsUrl) throw new Error('sin archive');
+    archiveIconBase = archiveIconsBase;
     configureArchiveParty({
       symbolsUrl: symbolsUrl.href,
       loadFiles: () => loadGameFiles(packBase, manifest.rom.path),
