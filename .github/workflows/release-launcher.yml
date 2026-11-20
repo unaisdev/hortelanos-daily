@@ -19,6 +19,7 @@ jobs:
           chmod +x scripts/verify-protocol.sh
           scripts/verify-protocol.sh games/dailygold
           scripts/verify-protocol.sh games/dailyred
+          scripts/verify-protocol.sh games/dailysteven
 
   build:
     needs: verify

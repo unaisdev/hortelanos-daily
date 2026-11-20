@@ -1,7 +1,9 @@
 import * as v2 from './dailyred-conf-v2+status-v1.js';
+import * as dailymaxV1 from './dailymax-conf-v1+status-v1.js';
 
 const REGISTRY = {
   [v2.PROTOCOL_ID]: v2,
+  [dailymaxV1.PROTOCOL_ID]: dailymaxV1,
 };
 
 export function listProtocolIds() {
