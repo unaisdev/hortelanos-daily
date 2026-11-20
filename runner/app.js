@@ -10,6 +10,7 @@ import { createStatsDiskMirror } from '../shell/desktop.js';
 import { previewTeamForSeed } from './team-preview.js';
 import { configureArchiveParty, loadArchiveParty, peekArchiveParty } from './archive-party.js';
 import { STEVEN_ARCHIVE_FORMAT } from './steven-archive.js';
+import { loadInstagram, loadInstagramDeclined } from '../shared/player-profile.js';
 import {
   promptInstagramIfNeeded,
   rankingEnabled,
@@ -166,7 +167,9 @@ let winSubmitPending = null;
 /** Publish win to shared ranking (UI lives in the launcher only). */
 async function publishWinIfNeeded(date, won) {
   if (!won || practiceSeed || !gameId) return;
-  if (gameId === 'dailysteven' && date !== today()) return;
+  if (gameId === 'dailysteven') {
+    if (date !== today() || (loadInstagramDeclined() && !loadInstagram())) return;
+  }
   if (!(await rankingEnabled(gameId))) return;
   if (winSubmitPending === date) return;
   winSubmitPending = date;
