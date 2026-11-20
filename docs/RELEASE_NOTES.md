@@ -9,6 +9,10 @@ Si no lo entendería tu abuela o un amigo que solo quiere jugar, no va aquí.
 Aplica al release del launcher (`unaisdev/hortelanos-daily`) y a los packs
 de cada juego (`dailygold`, `dailyred`).
 
+El workflow del lanzador usa `docs/launcher-releases/<versión>.md` según la
+versión de `package.json`. Añade el archivo de la nueva versión al preparar
+la release.
+
 ## Plantilla
 
 ```text
