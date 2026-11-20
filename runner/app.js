@@ -1,7 +1,7 @@
 import { Nostalgist } from './vendor/nostalgist.js';
 import { loadGameFiles } from './game-files.js';
 import { getProtocolAdapter } from './protocols/index.js';
-import { checkGameCompat } from './compat.js';
+import { checkGameCompat, getLauncherVersion } from './compat.js';
 import {
   configureDaily, today, addDays, dailySeed, msUntilTomorrow, loadStats, hydrateStatsFromDisk,
   resultFor, currentStreaks, markBattleStarted, recordResult, settleAbandonedGame,
@@ -669,7 +669,7 @@ async function boot() {
   if (!res.ok) throw new Error(`No se encontró el pack «${gameId}».`);
   manifest = await res.json();
 
-  const compat = checkGameCompat(manifest);
+  const compat = checkGameCompat(manifest, await getLauncherVersion());
   if (!compat.ok) {
     ui.gameTitle.textContent = manifest.name || gameId;
     ui.errorText.textContent = compat.message;

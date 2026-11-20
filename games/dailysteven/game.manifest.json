@@ -1,0 +1,27 @@
+{
+  "id": "dailysteven",
+  "name": "Daily Steven",
+  "contentVersion": "0.0.0",
+  "protocolId": "dailymax-conf-v1+status-v1",
+  "rom": {
+    "path": "rom/dailymaximo.gba.gz",
+    "configMagic": "DAILYMAX-CONF-V1",
+    "statusMagic": "DAILYMAX-STATUS1",
+    "configLayout": "seed_u32,wins_u16,battles_u16,daily_u8",
+    "statusLayout": "magic16,seed_u32,phase_u8,result_u8"
+  },
+  "client": {
+    "statsKey": "hortelano:dailysteven:stats",
+    "seedPrefix": "dailysteven:",
+    "bossLabel": "STEVEN",
+    "titleAsset": "assets/maximo.png",
+    "mutedKey": "hortelano:dailysteven:muted"
+  },
+  "compat": {
+    "minLauncherVersion": "2.2.0",
+    "runnerAdapters": [
+      "dailymax-conf-v1+status-v1"
+    ]
+  },
+  "status": "awaiting-content-pack"
+}

@@ -19,6 +19,7 @@ jobs:
           chmod +x scripts/verify-protocol.sh
           scripts/verify-protocol.sh games/dailygold
           scripts/verify-protocol.sh games/dailyred
+          scripts/verify-protocol.sh games/dailysteven
 
   build:
     needs: verify
@@ -51,6 +52,18 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      - name: Read release notes for the launcher version
+        id: notes
+        shell: pwsh
+        run: |
+          $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Release tag $env:GITHUB_REF_NAME does not match launcher version $version"
+          }
+          $notes = Get-Content -Raw -Encoding utf8 -LiteralPath "docs/launcher-releases/$version.md" -ErrorAction Stop
+          $delimiter = [Guid]::NewGuid().ToString()
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Value @("body<<$delimiter", $notes.TrimEnd(), $delimiter)
+
       - name: Build Tauri (unsigned)
         uses: tauri-apps/tauri-action@v0
         env:
@@ -59,19 +72,7 @@ jobs:
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
           releaseName: Hortelano's Daily ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
-          releaseBody: |
-            ## Novedades
-
-            - Daily Red ahora está en español, como Daily Gold.
-            - Daily Red estrena "Equipos pasados": mira el equipo de cualquier día anterior y practica contra él sin gastar el intento diario.
-            - Esta versión no se ha probado en Mac.
-
-            Créditos: basado en Daily Red de amoi-builds; tablas en español basadas en Acimut/pokefirered; construido sobre pret/pokefirered.
-
-            ## Descarga
-
-            - En Mac: abre el DMG, arrastra la app a Aplicaciones. Si macOS avisa, clic derecho > Abrir > Abrir.
-            - En Windows: baja el zip portable, descomprimelo y abrelo. No hace falta instalar nada.
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
           includeUpdaterJson: false
           args: ${{ matrix.args }}
