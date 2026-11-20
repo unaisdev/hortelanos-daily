@@ -5,7 +5,8 @@
     "name": "Hortelano's Daily",
     "version": "2.1.0",
     "minProtocolAdapters": [
-      "dailyred-conf-v2+status-v1"
+      "dailyred-conf-v2+status-v1",
+      "dailymax-conf-v1+status-v1"
     ]
   },
   "games": [
@@ -46,6 +47,26 @@
       "content": {
         "repo": "unaisdev/dailyred",
         "asset": "dailyred-content.zip",
+        "tagPrefix": "content-v"
+      }
+    },
+    {
+      "id": "dailysteven",
+      "name": "Daily Steven",
+      "boss": "STEVEN",
+      "blurb": "Un combate doble al d\u00eda contra STEVEN y su compa\u00f1ero.",
+      "contentVersion": "0.1.0",
+      "protocolId": "dailymax-conf-v1+status-v1",
+      "packPath": "games/dailysteven",
+      "menu": {
+        "accent": "#8fb8d8",
+        "sprite": "assets/trainers/steven.png?v=1",
+        "spriteStatic": "assets/trainers/steven.png?v=1",
+        "mascot": "STEVEN"
+      },
+      "content": {
+        "repo": "unaisdev/dailysteven",
+        "asset": "dailysteven-content.zip",
         "tagPrefix": "content-v"
       }
     }
