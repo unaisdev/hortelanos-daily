@@ -7,6 +7,7 @@
 import { Nostalgist } from './vendor/nostalgist.js';
 import { loadGameFiles } from './game-files.js';
 import { decodeParty } from './party-decode.js';
+import { STEVEN_ARCHIVE_FORMAT, readStevenParty, verifyStevenArchive } from './steven-archive.js';
 
 const STATE_EWRAM = 0x21000;
 const STATE_IWRAM = 0x19000;
@@ -14,6 +15,7 @@ const CACHE_KEY = 'dailyred-archive-party-v2';
 const memoryCache = new Map();
 let inflight = null;
 let symbolsPromise = null;
+let verificationPromise = null;
 
 function notConfigured(name) {
   return () => {
@@ -33,6 +35,9 @@ let options = {
 export function configureArchiveParty(next = {}) {
   options = { ...options, ...next };
   symbolsPromise = null;
+  verificationPromise = null;
+  memoryCache.clear();
+  if (options.format !== STEVEN_ARCHIVE_FORMAT) loadCache();
 }
 
 function loadCache() {
@@ -44,13 +49,12 @@ function loadCache() {
 
 function saveCache(seed, party) {
   memoryCache.set(seed, party);
+  if (options.format === STEVEN_ARCHIVE_FORMAT) return;
   try {
     const raw = Object.fromEntries([...memoryCache.entries()].slice(-40));
     localStorage.setItem(options.cacheKey, JSON.stringify(raw));
   } catch { /* quota / private mode */ }
 }
-
-loadCache();
 
 async function loadSymbols() {
   symbolsPromise ??= fetch(options.symbolsUrl)
@@ -107,21 +111,24 @@ async function waitForStatus(read, timeoutMs = 30000) {
   throw new Error('El equipo tardó demasiado en generarse');
 }
 
-async function readPartyFromEmu(emu, symbols) {
+async function readPartyFromEmu(emu, symbols, seed) {
   const { state } = await emu.saveState();
   const mem = unwrapSaveState(new Uint8Array(await state.arrayBuffer()));
   const count = mem.read(symbols.gPlayerPartyCount, 1)[0];
+  if (options.format === STEVEN_ARCHIVE_FORMAT) {
+    return { count, party: readStevenParty(mem, symbols, seed) };
+  }
   const bytes = mem.read(symbols.gPlayerParty, 600);
   return { count, bytes, party: decodeParty(bytes, count || 6) };
 }
 
 // Status appears in CB2_DailyRed_StartFromCopyright before GenerateTeam runs,
 // so we keep polling the save state until the party is actually filled.
-async function waitForParty(emu, symbols, timeoutMs = 30000) {
+async function waitForParty(emu, symbols, seed, timeoutMs = 30000) {
   const start = performance.now();
   while (performance.now() - start < timeoutMs) {
     try {
-      const snapshot = await readPartyFromEmu(emu, symbols);
+      const snapshot = await readPartyFromEmu(emu, symbols, seed);
       if (snapshot.count === 6 && snapshot.party.length === 6) return snapshot.party;
     } catch { /* save state not ready yet */ }
     await new Promise((r) => setTimeout(r, 150));
@@ -131,6 +138,10 @@ async function waitForParty(emu, symbols, timeoutMs = 30000) {
 
 async function bootAndRead(seed) {
   const [files, symbols] = await Promise.all([options.loadFiles(), loadSymbols()]);
+  if (options.format === STEVEN_ARCHIVE_FORMAT) {
+    verificationPromise ??= verifyStevenArchive(files.rom, symbols);
+    await verificationPromise;
+  }
   const rom = options.injectConfig(files.rom, { seed });
   const canvas = document.createElement('canvas');
   canvas.width = 240;
@@ -155,7 +166,7 @@ async function bootAndRead(seed) {
     });
     const read = options.createGameLink(emu, seed);
     await waitForStatus(read);
-    return await waitForParty(emu, symbols);
+    return await waitForParty(emu, symbols, seed);
   } finally {
     try { emu?.exit(); } catch { /* ignore */ }
     canvas.remove();
