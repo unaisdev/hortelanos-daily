@@ -1,9 +1,11 @@
 import { hasProtocolAdapter } from './protocols/index.js';
 
-const LAUNCHER_VERSION = '0.1.0';
-
-export function getLauncherVersion() {
-  return LAUNCHER_VERSION;
+export async function getLauncherVersion() {
+  const response = await fetch(new URL('../catalog/catalog.json', import.meta.url));
+  if (!response.ok) throw new Error('No se pudo cargar el catálogo del lanzador.');
+  const { launcher } = await response.json();
+  if (!launcher?.version) throw new Error('El catálogo no declara la versión del lanzador.');
+  return launcher.version;
 }
 
 /** Semver simple a-b: -1 si a<b, 0 igual, 1 si a>b */
@@ -24,7 +26,7 @@ export function compareSemver(a, b) {
  * Valida manifest antes de jugar.
  * @returns {{ ok: true } | { ok: false, code: string, message: string }}
  */
-export function checkGameCompat(manifest) {
+export function checkGameCompat(manifest, launcherVersion) {
   if (!manifest?.protocolId) {
     return { ok: false, code: 'no-protocol', message: 'El pack no declara protocolId.' };
   }
@@ -36,11 +38,11 @@ export function checkGameCompat(manifest) {
     };
   }
   const min = manifest.compat?.minLauncherVersion;
-  if (min && compareSemver(LAUNCHER_VERSION, min) < 0) {
+  if (min && compareSemver(launcherVersion, min) < 0) {
     return {
       ok: false,
       code: 'launcher-too-old',
-      message: `Este pack pide Hortelano's Daily ≥ ${min} (tienes ${LAUNCHER_VERSION}). Actualiza el launcher.`,
+      message: `Este pack pide Hortelano's Daily ≥ ${min} (tienes ${launcherVersion}). Actualiza el launcher.`,
     };
   }
   if (manifest.status === 'awaiting-content-pack') {

@@ -7,6 +7,7 @@
  * y que no se confunde con las del otro juego (Daily Red/Gold vs Daily Steven).
  */
 import assert from 'node:assert/strict';
+import { checkGameCompat } from '../runner/compat.js';
 import {
   getProtocolAdapter,
   hasProtocolAdapter,
@@ -22,6 +23,13 @@ function test(name, fn) {
 
 const RED = 'dailyred-conf-v2+status-v1';
 const MAX = 'dailymax-conf-v1+status-v1';
+
+test('la compatibilidad usa la versión del lanzador y conserva los packs anteriores', () => {
+  const steven = { protocolId: MAX, compat: { minLauncherVersion: '3.0.0' } };
+  assert.equal(checkGameCompat(steven, '2.9.9').code, 'launcher-too-old');
+  assert.ok(checkGameCompat(steven, '3.0.0').ok);
+  assert.ok(checkGameCompat({ protocolId: RED, compat: { minLauncherVersion: '0.1.0' } }, '3.0.0').ok);
+});
 
 function fakeRom(magic) {
   const rom = new Uint8Array(4096).fill(0xff);

@@ -10,7 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify dailygold protocol + ROM magic
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run test:protocols
+      - name: Verify protocol packs and ROM signatures
         run: |
           chmod +x scripts/verify-protocol.sh
           scripts/verify-protocol.sh games/dailygold
