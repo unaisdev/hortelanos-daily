@@ -18,7 +18,7 @@
     "mutedKey": "hortelano:dailysteven:muted"
   },
   "compat": {
-    "minLauncherVersion": "0.1.0",
+    "minLauncherVersion": "2.2.0",
     "runnerAdapters": [
       "dailymax-conf-v1+status-v1"
     ]
