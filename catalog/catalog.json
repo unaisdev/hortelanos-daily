@@ -55,7 +55,7 @@
       "name": "Daily Steven",
       "boss": "STEVEN",
       "blurb": "Un combate doble al d\u00eda contra STEVEN y su compa\u00f1ero.",
-      "contentVersion": "0.1.0",
+      "contentVersion": "0.1.1",
       "protocolId": "dailymax-conf-v1+status-v1",
       "packPath": "games/dailysteven",
       "menu": {
