@@ -65,7 +65,7 @@ let packBase = null;
 let protocol = null;
 let practiceSeed = null;
 let archiveSeed = null;
-let archiveIconBase = null;
+const archiveIconBase = new URL('./archive/dailygold/', import.meta.url);
 let stats = null;
 let emu = null;
 let readGame = null;
@@ -411,10 +411,21 @@ function archiveTip(mon) {
   return tip;
 }
 
+function archiveSpriteFallback() {
+  const placeholder = document.createElement('span');
+  placeholder.className = 'archive-mon-sprite archive-mon-sprite-placeholder';
+  placeholder.setAttribute('role', 'img');
+  placeholder.setAttribute('aria-label', 'Icono no disponible');
+  placeholder.title = 'Icono no disponible';
+  placeholder.textContent = '—';
+  return placeholder;
+}
+
 function renderArchiveTeam(party) {
-  const legendaryIds = new Set(archiveIconBase
-    ? previewTeamForSeed(archiveSeed).filter((m) => m.legendary).map((m) => m.id)
-    : []);
+  const isSteven = gameId === 'dailysteven';
+  const legendaryIds = new Set(isSteven
+    ? []
+    : previewTeamForSeed(archiveSeed).filter((m) => m.legendary).map((m) => m.id));
   ui.archiveTeam.hidden = false;
   ui.archiveTeam.replaceChildren(...party.map((mon) => {
     const li = document.createElement('li');
@@ -423,15 +434,19 @@ function renderArchiveTeam(party) {
     if (legendaryIds.has(mon.species)) li.classList.add('is-legendary');
     if (mon.shiny) li.classList.add('is-shiny');
 
-    if (archiveIconBase) {
+    const iconId = isSteven ? mon.archiveIconId ?? null : mon.species;
+    if (iconId === null) {
+      li.appendChild(archiveSpriteFallback());
+    } else {
       const img = document.createElement('img');
       img.className = 'archive-mon-sprite';
-      img.src = new URL(`icons/${mon.species}.png`, archiveIconBase).href;
       img.width = 64;
       img.height = 64;
       img.alt = mon.name;
       img.loading = 'lazy';
       img.decoding = 'async';
+      if (isSteven) img.addEventListener('error', () => img.replaceWith(archiveSpriteFallback()), { once: true });
+      img.src = new URL(`icons/${iconId}.png`, archiveIconBase).href;
       li.appendChild(img);
     }
 
@@ -550,7 +565,6 @@ async function initArchive() {
   try {
     const symbolsUrl = await findArchiveSymbols();
     if (!symbolsUrl) throw new Error('sin archive');
-    archiveIconBase = isSteven ? null : new URL('./archive/dailygold/', import.meta.url);
     configureArchiveParty({
       format: manifest.archive?.format,
       symbolsUrl: symbolsUrl.href,

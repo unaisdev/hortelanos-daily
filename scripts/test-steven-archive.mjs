@@ -1,7 +1,28 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { test } from 'node:test';
 import { readStevenParty, STEVEN_ARCHIVE_FORMAT, verifyStevenArchive } from '../runner/steven-archive.js';
+import { STEVEN_SPRITE_ROM_SHA256, stevenArchiveIconId } from '../runner/steven-archive-sprites.js';
+
+const icon = (species) => stevenArchiveIconId(species, STEVEN_SPRITE_ROM_SHA256);
+
+test('archive sprites translate Expansion IDs to existing Gold icons', () => {
+  assert.deepEqual([25, 29, 32, 252, 280, 282].map(icon), [25, 29, 32, 277, 392, 394]);
+  const icons = Array.from({ length: 386 }, (_, i) => icon(i + 1)).filter((id) => id !== null);
+  assert.equal(icons.length, 383);
+  assert.equal(new Set(icons).size, icons.length);
+  for (const id of icons) {
+    assert.ok(existsSync(new URL(`../runner/archive/dailygold/icons/${id}.png`, import.meta.url)), `missing icon ${id}`);
+  }
+});
+
+test('archive sprites fall back for ambiguous forms and unknown IDs', () => {
+  for (const species of [0, 201, 351, 386, 387, 1024, 1053, 1056, 65535, undefined]) {
+    assert.equal(icon(species), null);
+  }
+  assert.equal(stevenArchiveIconId(252, '0'.repeat(64)), null);
+});
 
 test('archive symbols are rejected when the ROM bytes change', async () => {
   const rom = Uint8Array.of(1, 2, 3);
