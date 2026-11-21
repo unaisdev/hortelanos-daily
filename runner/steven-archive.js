@@ -1,4 +1,6 @@
 // Stable export from Daily Steven's pokeemerald-expansion ROM.
+import { stevenArchiveIconId } from './steven-archive-sprites.js';
+
 export const STEVEN_ARCHIVE_FORMAT = 'steven-expansion-v1';
 const MON_BYTES = 216;
 const PARTY_SIZE = 6;
@@ -39,8 +41,10 @@ export function readStevenParty(mem, symbols, seed) {
       return name.trim();
     };
     const stats = [14, 16, 18, 20, 22, 24].map((offset) => u16(base + offset));
+    const species = u16(base);
     return {
-      species: u16(base),
+      species,
+      archiveIconId: stevenArchiveIconId(species, symbols.romSha256),
       name: text(0),
       level: bytes[base + 27],
       shiny: Boolean(bytes[base + 28]),

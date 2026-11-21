@@ -640,6 +640,12 @@ a { color: inherit; text-underline-offset: 3px; }
   display: block;
 }
 
+.archive-mon-sprite-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
 .archive-mon-tag {
   display: block;
   margin-top: 4px;
