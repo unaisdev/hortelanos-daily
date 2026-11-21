@@ -193,15 +193,21 @@ export function renderRankingList(container, entries, {
 }
 
 export async function loadRankingInto(boardEl, statusEl, gameId, playDate, options = {}) {
-  if (!(await rankingEnabled(gameId))) {
-    const wrap = boardEl?.closest?.('.ranking-panel');
+  const enabled = await rankingEnabled(gameId);
+  if (options.isCurrent?.() === false) return;
+  const wrap = boardEl?.closest?.('.ranking-panel');
+  if (!enabled) {
     if (wrap) wrap.hidden = true;
     return { ok: false, disabled: true, entries: [] };
   }
-  const wrap = boardEl?.closest?.('.ranking-panel');
   if (wrap) wrap.hidden = false;
   if (statusEl) statusEl.textContent = 'Cargando…';
   const result = await fetchRanking(gameId, playDate);
+  if (options.isCurrent?.() === false) return;
+  if (result.disabled) {
+    if (wrap) wrap.hidden = true;
+    return result;
+  }
   if (statusEl) {
     if (!result.ok) statusEl.textContent = 'Sin conexión al ranking';
     else if (result.entries.length) statusEl.textContent = `${result.entries.length} han ganado hoy`;

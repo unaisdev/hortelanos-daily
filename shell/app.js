@@ -485,16 +485,19 @@ let rankingRequest = 0;
 async function refreshShellRanking() {
   const game = games[selected];
   if (!rankingPanel || !rankingBoard) return;
-  if (!game || !(await rankingEnabled(game.id))) {
-    rankingPanel.hidden = true;
-    return;
-  }
   const requestId = ++rankingRequest;
+  if (rankingPanel.dataset.gameId !== game?.id) rankingPanel.hidden = true;
+  if (!game) return;
+  rankingPanel.dataset.gameId = game.id;
   await loadRankingInto(rankingBoard, rankingStatus, game.id, localToday(), {
     modalTitle: `${game.name} · hoy`,
+    isCurrent: () => requestId === rankingRequest,
   });
-  if (requestId !== rankingRequest) return;
 }
+
+window.addEventListener('focus', () => {
+  if (games[selected]?.id === 'dailysteven') void refreshShellRanking();
+});
 
 function renderDisplay() {
   const game = games[selected];
