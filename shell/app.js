@@ -476,6 +476,7 @@ function initPlayerIg() {
 async function ensureIgBeforeLaunch(gameId) {
   if (!(await rankingEnabled(gameId))) return { joined: false, skipped: true };
   if (loadInstagram()) return { joined: true, skipped: false };
+  if (gameId === 'dailysteven' && loadInstagramDeclined()) return { joined: false, skipped: true };
   return openIgOnboard({ mode: 'launch' });
 }
 

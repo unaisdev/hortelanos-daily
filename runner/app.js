@@ -9,6 +9,8 @@ import {
 import { createStatsDiskMirror } from '../shell/desktop.js';
 import { previewTeamForSeed } from './team-preview.js';
 import { configureArchiveParty, loadArchiveParty, peekArchiveParty } from './archive-party.js';
+import { STEVEN_ARCHIVE_FORMAT } from './steven-archive.js';
+import { loadInstagram, loadInstagramDeclined } from '../shared/player-profile.js';
 import {
   promptInstagramIfNeeded,
   rankingEnabled,
@@ -165,12 +167,15 @@ let winSubmitPending = null;
 /** Publish win to shared ranking (UI lives in the launcher only). */
 async function publishWinIfNeeded(date, won) {
   if (!won || practiceSeed || !gameId) return;
+  if (gameId === 'dailysteven') {
+    if (date !== today() || (loadInstagramDeclined() && !loadInstagram())) return;
+  }
   if (!(await rankingEnabled(gameId))) return;
   if (winSubmitPending === date) return;
   winSubmitPending = date;
   try {
     const handle = await promptInstagramIfNeeded();
-    if (!handle) return;
+    if (!handle || (gameId === 'dailysteven' && date !== today())) return;
     await submitWin({
       gameId,
       playDate: date,
@@ -286,7 +291,17 @@ async function startRun() {
 function watchGame() {
   let status;
   try { status = readGame?.(); } catch { return; }
-  if (!status || practiceSeed) return;
+  if (!status) return;
+  if (practiceSeed) {
+    if (gameId === 'dailysteven' && status.phase === PHASE.FINISHED) {
+      practiceSeed = null;
+      const url = new URL(location.href);
+      url.searchParams.delete('seed');
+      history.replaceState(null, '', url);
+      endDailyGame(1000);
+    }
+    return;
+  }
   if (status.phase >= PHASE.BATTLE) {
     battleSeen = true;
     markBattleStarted(stats, runDate);
@@ -333,7 +348,7 @@ onClick(ui.play, startRun);
 onClick(ui.retry, startRun);
 
 function archiveEnabled() {
-  return Boolean(ui.archive && !ui.archive.hidden && archiveIconBase);
+  return Boolean(ui.archive && !ui.archive.hidden);
 }
 
 function latestArchiveDate() {
@@ -397,9 +412,9 @@ function archiveTip(mon) {
 }
 
 function renderArchiveTeam(party) {
-  const legendaryIds = new Set(
-    previewTeamForSeed(archiveSeed).filter((m) => m.legendary).map((m) => m.id),
-  );
+  const legendaryIds = new Set(archiveIconBase
+    ? previewTeamForSeed(archiveSeed).filter((m) => m.legendary).map((m) => m.id)
+    : []);
   ui.archiveTeam.hidden = false;
   ui.archiveTeam.replaceChildren(...party.map((mon) => {
     const li = document.createElement('li');
@@ -408,20 +423,23 @@ function renderArchiveTeam(party) {
     if (legendaryIds.has(mon.species)) li.classList.add('is-legendary');
     if (mon.shiny) li.classList.add('is-shiny');
 
-    const img = document.createElement('img');
-    img.className = 'archive-mon-sprite';
-    img.src = new URL(`icons/${mon.species}.png`, archiveIconBase).href;
-    img.width = 64;
-    img.height = 64;
-    img.alt = mon.name;
-    img.loading = 'lazy';
-    img.decoding = 'async';
+    if (archiveIconBase) {
+      const img = document.createElement('img');
+      img.className = 'archive-mon-sprite';
+      img.src = new URL(`icons/${mon.species}.png`, archiveIconBase).href;
+      img.width = 64;
+      img.height = 64;
+      img.alt = mon.name;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      li.appendChild(img);
+    }
 
     const name = document.createElement('span');
     name.className = 'archive-mon-name';
     name.textContent = mon.name;
 
-    li.append(img, name, archiveTip(mon));
+    li.append(name, archiveTip(mon));
     if (legendaryIds.has(mon.species)) {
       const tag = document.createElement('span');
       tag.className = 'archive-mon-tag';
@@ -472,6 +490,10 @@ async function showArchivePreview() {
   } catch (err) {
     if (requestId !== archiveRequest) return;
     console.error(err);
+    if (gameId === 'dailysteven') {
+      ui.archiveStatus.textContent = `No se pudo recuperar el equipo. ${err?.message || err}`;
+      return;
+    }
     const speciesOnly = previewTeamForSeed(archiveSeed).map((m) => ({
       species: m.id,
       name: m.name,
@@ -511,7 +533,7 @@ function fightArchiveTeam() {
 async function findArchiveSymbols() {
   const candidates = [];
   if (manifest?.archive?.symbols) candidates.push(new URL(manifest.archive.symbols, packBase));
-  candidates.push(new URL(`./archive/${gameId}/symbols.json`, import.meta.url));
+  if (gameId !== 'dailysteven') candidates.push(new URL(`./archive/${gameId}/symbols.json`, import.meta.url));
   for (const url of candidates) {
     try {
       const res = await fetch(url);
@@ -523,13 +545,14 @@ async function findArchiveSymbols() {
 
 async function initArchive() {
   if (!ui.archive) return;
-  // Species sprites are shared by all games.
-  const archiveIconsBase = new URL('./archive/dailygold/', import.meta.url);
+  const isSteven = gameId === 'dailysteven';
+  if (isSteven && manifest?.archive?.format !== STEVEN_ARCHIVE_FORMAT) return;
   try {
     const symbolsUrl = await findArchiveSymbols();
     if (!symbolsUrl) throw new Error('sin archive');
-    archiveIconBase = archiveIconsBase;
+    archiveIconBase = isSteven ? null : new URL('./archive/dailygold/', import.meta.url);
     configureArchiveParty({
+      format: manifest.archive?.format,
       symbolsUrl: symbolsUrl.href,
       loadFiles: () => loadGameFiles(packBase, manifest.rom.path),
       injectConfig: (rom, opts) => protocol.injectConfig(rom, opts),

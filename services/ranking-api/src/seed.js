@@ -2,6 +2,7 @@
 
 export const SEED_PREFIXES = {
   dailygold: 'dailyoro:',
+  dailysteven: 'dailysteven:',
 };
 
 export const ALLOWED_GAMES = Object.keys(SEED_PREFIXES);

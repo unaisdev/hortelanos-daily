@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: 22
       - run: npm run test:protocols
+      - run: npm run test:ranking-seed
+      - run: npm run test:steven
       - name: Verify protocol packs and ROM signatures
         run: |
           chmod +x scripts/verify-protocol.sh
