@@ -15,7 +15,7 @@
     "test:protocols": "node scripts/test-protocols.mjs",
     "test:stats": "node scripts/test-daily-stats.mjs",
     "test:ranking-seed": "node scripts/test-ranking-seed.mjs",
-    "test:steven": "node --test scripts/test-steven-archive.mjs services/ranking-api/test/ranking.test.js",
+    "test:steven": "node --test scripts/test-steven-archive.mjs scripts/test-ranking-availability.mjs services/ranking-api/test/ranking.test.js",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "test": "npm run test:stats && npm run test:protocols && npm run test:ranking-seed && npm run test:rust && npm run verify"
   },

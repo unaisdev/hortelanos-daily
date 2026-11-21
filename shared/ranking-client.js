@@ -1,10 +1,14 @@
 import { getDeviceId, loadInstagram, normalizeInstagram } from './player-profile.js';
 
 const DEFAULT_TIMEOUT_MS = 8000;
+const STEVEN_HEALTH_TIMEOUT_MS = 1200;
+const STEVEN_HEALTH_TTL_MS = 60_000;
 const CONFIG_URL = new URL('./ranking-config.json', import.meta.url);
 
 let cachedConfig = null;
 let configPromise = null;
+let stevenHealth = null;
+let stevenHealthRequest = null;
 
 async function loadConfig() {
   if (cachedConfig) return cachedConfig;
@@ -26,12 +30,43 @@ function apiBase(config) {
   return String(config?.apiUrl || '').trim().replace(/\/$/, '');
 }
 
+function freshStevenHealth(entry) {
+  return typeof entry?.enabled === 'boolean' && entry.expiresAt > Date.now();
+}
+
+async function stevenRankingEnabled(base) {
+  const key = `hortelano:steven-ranking-health:${base}`;
+  if (freshStevenHealth(stevenHealth)) return stevenHealth.enabled;
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(key));
+    if (freshStevenHealth(cached)) {
+      stevenHealth = cached;
+      return cached.enabled;
+    }
+  } catch { /* Storage is optional. */ }
+
+  stevenHealthRequest ??= request('/health', { timeoutMs: STEVEN_HEALTH_TIMEOUT_MS, cache: 'no-store' })
+    .then(({ ok, data }) => {
+      const enabled = ok && data?.ok === true
+        && Array.isArray(data.games) && data.games.includes('dailysteven');
+      stevenHealth = { enabled, expiresAt: Date.now() + STEVEN_HEALTH_TTL_MS };
+      try {
+        sessionStorage.setItem(key, JSON.stringify(stevenHealth));
+      } catch { /* Storage is optional. */ }
+      return enabled;
+    })
+    .finally(() => { stevenHealthRequest = null; });
+  return stevenHealthRequest;
+}
+
 export async function rankingEnabled(gameId) {
   const config = await loadConfig();
-  if (!apiBase(config)) return false;
+  const base = apiBase(config);
+  if (!base) return false;
   const games = config?.games;
-  if (Array.isArray(games) && games.length) return games.includes(gameId);
-  return gameId === 'dailygold';
+  const configured = Array.isArray(games) && games.length ? games.includes(gameId) : gameId === 'dailygold';
+  if (!configured) return false;
+  return gameId === 'dailysteven' ? stevenRankingEnabled(base) : true;
 }
 
 export async function seedPrefixFor(gameId) {
