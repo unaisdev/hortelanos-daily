@@ -1,6 +1,9 @@
 import { SPECIES_NAMES } from './archive-data.js';
 
-export const STEVEN_SPRITE_ROM_SHA256 = 'e34c3805231bc919e27c9443b1e588ca9f54ed8a4bb3cf72b6d15bb82f031360';
+export const STEVEN_SPRITE_ROM_SHA256 = new Set([
+  'e34c3805231bc919e27c9443b1e588ca9f54ed8a4bb3cf72b6d15bb82f031360', // content-v0.1.2
+  'e259d55a1e9280b52db34c5663daca8da945ad80fc8e7013b4829b190bb63c37', // content-v0.1.3
+]);
 
 // Canonical keys by ID from the expansion's include/constants/species.h.
 // Pinned build: 8fb02c6f2b81271e795d3f6aca61733fec739016.
@@ -44,7 +47,7 @@ JIRACHI DEOXYS_NORMAL
 const FORM_SPECIFIC = new Set(['UNOWN', 'CASTFORM_NORMAL', 'DEOXYS_NORMAL']);
 
 export function stevenArchiveIconId(species, romSha256) {
-  if (romSha256 !== STEVEN_SPRITE_ROM_SHA256 || !Number.isInteger(species) || species <= 0) return null;
+  if (!STEVEN_SPRITE_ROM_SHA256.has(romSha256) || !Number.isInteger(species) || species <= 0) return null;
   const key = STEVEN_SPECIES[species];
   if (!key || FORM_SPECIFIC.has(key)) return null;
   const id = SPECIES_NAMES.indexOf(key);
