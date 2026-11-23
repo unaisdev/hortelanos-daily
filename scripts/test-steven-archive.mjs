@@ -5,13 +5,17 @@ import { test } from 'node:test';
 import { readStevenParty, STEVEN_ARCHIVE_FORMAT, verifyStevenArchive } from '../runner/steven-archive.js';
 import { STEVEN_SPRITE_ROM_SHA256, stevenArchiveIconId } from '../runner/steven-archive-sprites.js';
 
-const [previousRom, correctedRom] = STEVEN_SPRITE_ROM_SHA256;
-const icon = (species) => stevenArchiveIconId(species, correctedRom);
+const [referenceRom, ...otherRoms] = STEVEN_SPRITE_ROM_SHA256;
+const ids = Array.from({ length: 386 }, (_, i) => i + 1);
+const icon = (species, rom = referenceRom) => stevenArchiveIconId(species, rom);
 
 test('archive sprites translate Expansion IDs to existing Gold icons', () => {
-  assert.deepEqual([25, 29, 32, 252, 280, 282].map(icon), [25, 29, 32, 277, 392, 394]);
-  assert.equal(stevenArchiveIconId(252, previousRom), 277);
-  const icons = Array.from({ length: 386 }, (_, i) => icon(i + 1)).filter((id) => id !== null);
+  assert.deepEqual([25, 29, 32, 252, 280, 282].map(species => icon(species)), [25, 29, 32, 277, 392, 394]);
+  const expected = ids.map(species => icon(species));
+  for (const rom of otherRoms) {
+    assert.deepEqual(ids.map(species => icon(species, rom)), expected, rom);
+  }
+  const icons = expected.filter(id => id !== null);
   assert.equal(icons.length, 383);
   assert.equal(new Set(icons).size, icons.length);
   for (const id of icons) {
