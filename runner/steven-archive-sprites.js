@@ -4,6 +4,7 @@ export const STEVEN_SPRITE_ROM_SHA256 = new Set([
   'e34c3805231bc919e27c9443b1e588ca9f54ed8a4bb3cf72b6d15bb82f031360', // content-v0.1.2
   'e259d55a1e9280b52db34c5663daca8da945ad80fc8e7013b4829b190bb63c37', // content-v0.1.3
   '09dd5aff74ffa86d75ce5f716829102479453943d5b2e646f58fb2aab09dd4c1', // content-v0.1.4
+  'e745d66dfe9072d6d694b62cf573884625d95540cf186a87ed6d76e17ba8dc09', // content-v0.1.5
 ]);
 
 // Canonical keys by ID from the expansion's include/constants/species.h.
