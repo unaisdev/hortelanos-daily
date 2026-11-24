@@ -89,26 +89,83 @@ export async function fetchRanking(gameId, playDate) {
   return { ok: true, entries, data: result.data };
 }
 
+/** All-time ranking by number of wins (all ROMs unless `gameId` is given). */
+export async function fetchAllTimeRanking(gameId = '') {
+  const config = await loadConfig();
+  if (!apiBase(config)) return { ok: false, disabled: true, entries: [] };
+  const q = new URLSearchParams(gameId ? { game: gameId } : {});
+  const result = await request(`/ranking/all?${q}`);
+  if (!result.ok) return { ...result, entries: [] };
+  const entries = Array.isArray(result.data?.entries) ? result.data.entries : [];
+  return { ok: true, entries, data: result.data };
+}
+
+/** Player card: wins, rank, streaks and history (newest first). */
+export async function fetchPlayer(handle, gameId = '') {
+  const config = await loadConfig();
+  if (!apiBase(config)) return { ok: false, disabled: true, error: 'ranking_disabled' };
+  const clean = normalizeInstagram(handle);
+  if (!clean) return { ok: false, error: 'invalid_instagram' };
+  const q = new URLSearchParams(gameId ? { game: gameId } : {});
+  const result = await request(`/player/${encodeURIComponent(clean)}?${q}`);
+  if (!result.ok) return result;
+  return { ok: true, player: result.data };
+}
+
+/** Photo URL for a handle (served by the Worker). `bust` forces a reload after changing it. */
+export async function avatarUrl(handle, bust = '') {
+  const config = await loadConfig();
+  const base = apiBase(config);
+  const clean = normalizeInstagram(handle);
+  if (!base || !clean) return '';
+  return `${base}/avatar/${encodeURIComponent(clean)}${bust ? `?v=${encodeURIComponent(bust)}` : ''}`;
+}
+
+/** Uploads this device's profile photo (a small image data URL). Needs a registered @ first. */
+export async function uploadAvatar(dataUrl) {
+  const config = await loadConfig();
+  if (!apiBase(config)) return { ok: false, disabled: true, error: 'ranking_disabled' };
+  const result = await request('/avatar', {
+    method: 'POST',
+    body: JSON.stringify({ device_id: getDeviceId(), image: dataUrl }),
+  });
+  return result.ok ? { ok: true } : result;
+}
+
+const IDENTITY_ERRORS = {
+  rename_limit: 'Solo puedes cambiar de @ 2 veces al día. Prueba mañana.',
+  handle_released: 'Ese @ ya no está disponible: alguien lo abandonó y quedó bloqueado.',
+  instagram_taken: 'Ese @ ya lo usa otra persona.',
+  invalid_instagram: 'Handle inválido (letras, números, . y _).',
+  rate_limited: 'Demasiados intentos; espera un minuto.',
+  invalid_image: 'Esa imagen no es válida. Prueba con un JPG o PNG.',
+  image_too_large: 'La imagen es demasiado grande.',
+  identity_required: 'Registra primero tu @ para poder subir la foto.',
+  network: 'Sin conexión con el servidor.',
+  timeout: 'El servidor no respondió a tiempo.',
+};
+
+/** Spanish message for a failed `setIdentity` / `submitWin` error code. */
+export function identityErrorMessage(error) {
+  return IDENTITY_ERRORS[error] || 'No se pudo registrar en el servidor. Reintenta.';
+}
+
 /**
  * Register / rename Instagram for this device (max 2 renames per UTC day).
+ * The server decides the day; renaming moves past wins to the new @ and burns the old one.
  */
-export async function setIdentity({ instagram, changeDate } = {}) {
+export async function setIdentity({ instagram } = {}) {
   const config = await loadConfig();
   if (!apiBase(config)) return { ok: false, disabled: true, error: 'ranking_disabled' };
 
   const handle = normalizeInstagram(instagram ?? loadInstagram());
   if (!handle) return { ok: false, error: 'instagram_required' };
 
-  const pad = (n) => String(n).padStart(2, '0');
-  const now = new Date();
-  const day = changeDate || `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-
   const result = await request('/identity', {
     method: 'POST',
     body: JSON.stringify({
       device_id: getDeviceId(),
       instagram: handle,
-      change_date: day,
     }),
   });
 

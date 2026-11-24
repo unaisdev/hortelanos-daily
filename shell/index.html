@@ -170,6 +170,7 @@
               inputmode="text"
             >
           </div>
+          <div id="ig-onboard-preview" aria-live="polite"></div>
           <p class="ig-onboard-status" id="ig-onboard-status" role="status"></p>
           <div class="ig-onboard-actions">
             <button type="button" class="ig-onboard-primary" id="ig-onboard-save">Guardar y jugar</button>
@@ -189,6 +190,44 @@
             <button type="button" class="ig-onboard-primary" id="ig-onboard-retry">Vale, pongo mi @</button>
             <button type="button" class="ig-onboard-secondary" id="ig-onboard-skip">Jugar sin ranking</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="help-modal ig-onboard-modal" id="ig-edit-modal" aria-labelledby="ig-edit-title">
+    <div class="help-modal-card ig-onboard-card">
+      <header class="help-modal-head">
+        <h2 id="ig-edit-title">Cambiar mi @</h2>
+      </header>
+      <div class="help-modal-body">
+        <p class="ig-onboard-copy">
+          Ahora eres <strong id="ig-edit-current">@</strong>. Tus victorias y rachas pasarán a tu nuevo @
+          y el ranking se actualizará.
+        </p>
+        <p class="ig-edit-warning" role="note">
+          Ojo: el @ que dejes <strong>quedará bloqueado para siempre</strong>. No podrás volver a
+          conseguirlo ni tú ni nadie. Solo puedes cambiarlo 2 veces al día.
+        </p>
+        <label class="player-ig-label" for="ig-edit-input">Nuevo usuario (sin https)</label>
+        <div class="player-ig-row">
+          <span class="player-ig-at" aria-hidden="true">@</span>
+          <input
+            class="player-ig-input"
+            id="ig-edit-input"
+            type="text"
+            maxlength="30"
+            autocomplete="username"
+            spellcheck="false"
+            placeholder="usuario"
+            inputmode="text"
+          >
+        </div>
+        <div id="ig-edit-preview" aria-live="polite"></div>
+        <p class="ig-onboard-status" id="ig-edit-status" role="status"></p>
+        <div class="ig-onboard-actions">
+          <button type="button" class="ig-onboard-primary" id="ig-edit-confirm">Cambiar y perder el actual</button>
+          <button type="button" class="ig-onboard-secondary" id="ig-edit-cancel">Cancelar</button>
         </div>
       </div>
     </div>
@@ -266,12 +305,16 @@
         <aside class="rank-stage" aria-label="Usuario y ranking">
           <div class="player-ig" id="player-ig">
             <div class="player-ig-card" id="ig-card" hidden>
+              <span class="player-ig-card-avatar" id="ig-card-avatar" aria-hidden="true"></span>
               <div class="player-ig-card-main">
                 <p class="player-ig-card-kicker">Sesión ranking</p>
                 <p class="player-ig-card-handle" id="ig-card-handle">@</p>
               </div>
+              <button type="button" class="player-ig-edit" id="ig-photo" aria-label="Cambiar foto" title="Cambiar foto">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-1.8a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/></svg>
+              </button>
               <button type="button" class="player-ig-edit" id="ig-edit" aria-label="Editar Instagram" title="Editar">
-                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm14.71-9.04a1 1 0 0 0 0-1.41l-2.51-2.51a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 2z"/></svg>
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
               </button>
             </div>
             <div class="player-ig-cta" id="ig-cta" hidden>
@@ -282,29 +325,16 @@
               </div>
               <button type="button" class="player-ig-cta-btn" id="ig-cta-open">Unirme al ranking</button>
             </div>
-            <div class="player-ig-form" id="ig-form" hidden>
-              <label class="player-ig-label" for="ig-input">Tu Instagram (ranking)</label>
-              <div class="player-ig-row">
-                <span class="player-ig-at" aria-hidden="true">@</span>
-                <input
-                  class="player-ig-input"
-                  id="ig-input"
-                  type="text"
-                  maxlength="30"
-                  autocomplete="username"
-                  spellcheck="false"
-                  placeholder="usuario"
-                  inputmode="text"
-                >
-                <button type="button" class="player-ig-save" id="ig-save">Guardar</button>
-              </div>
-            </div>
             <p class="player-ig-status" id="ig-status" role="status"></p>
           </div>
 
-          <section class="ranking-panel" id="ranking-panel" hidden aria-label="Ranking diario">
+          <section class="ranking-panel" id="ranking-panel" hidden aria-label="Ranking">
+            <div class="ranking-tabs" role="tablist" aria-label="Tipo de ranking">
+              <button type="button" class="ranking-tab" role="tab" id="ranking-tab-today" data-rank-tab="today" aria-selected="true">Hoy</button>
+              <button type="button" class="ranking-tab" role="tab" id="ranking-tab-all" data-rank-tab="all" aria-selected="false" tabindex="-1">Histórico</button>
+            </div>
             <header class="ranking-head">
-              <h3 class="ranking-title">Han ganado hoy</h3>
+              <h3 class="ranking-title" id="ranking-title">Han ganado hoy</h3>
               <p class="ranking-status" id="ranking-status"></p>
             </header>
             <div class="ranking-board" id="ranking-board"></div>

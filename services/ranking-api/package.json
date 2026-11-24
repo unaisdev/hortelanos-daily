@@ -9,7 +9,9 @@
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create hortelanos-daily-ranking",
     "db:migrate:local": "wrangler d1 migrations apply hortelanos-daily-ranking --local",
-    "db:migrate:remote": "wrangler d1 migrations apply hortelanos-daily-ranking --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply hortelanos-daily-ranking --remote",
+    "admin:list-released": "node scripts/admin-handles.mjs list",
+    "admin:release-handle": "node scripts/admin-handles.mjs release"
   },
   "devDependencies": {
     "wrangler": "^4.40.0"
