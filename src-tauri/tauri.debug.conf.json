@@ -1,6 +1,9 @@
 {
   "productName": "Hortelanos Daily (Debug)",
   "identifier": "dev.unais.hortelanos-daily.debug",
+  "bundle": {
+    "createUpdaterArtifacts": false
+  },
   "app": {
     "windows": [
       {

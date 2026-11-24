@@ -78,8 +78,7 @@ fn is_newer(remote: &str, local: &str) -> AppResult<bool> {
 }
 
 pub async fn check_launcher_update(app: &AppHandle) -> AppResult<LauncherUpdateInfo> {
-    let catalog = packs::read_catalog(app)?;
-    let current = catalog.launcher.version.clone();
+    let current = app.package_info().version.to_string();
     let url = format!("https://api.github.com/repos/{LAUNCHER_REPO}/releases/latest");
     let response = client()?.get(&url).send().await?;
     if response.status() == reqwest::StatusCode::NOT_FOUND {
@@ -107,6 +106,29 @@ pub async fn check_launcher_update(app: &AppHandle) -> AppResult<LauncherUpdateI
         html_url: Some(release.html_url),
         notes: release.body,
     })
+}
+
+/// In-place launcher update via tauri-plugin-updater (signed with our own key;
+/// no OS certificate needed). Returns None if already up to date.
+/// On success the app restarts and this call never returns.
+pub async fn install_launcher_update(app: &AppHandle) -> AppResult<Option<String>> {
+    use tauri_plugin_updater::UpdaterExt;
+    let updater = app
+        .updater()
+        .map_err(|e| AppError::msg(format!("updater: {e}")))?;
+    let Some(update) = updater
+        .check()
+        .await
+        .map_err(|e| AppError::msg(format!("updater check: {e}")))?
+    else {
+        return Ok(None);
+    };
+    let version = update.version.clone();
+    update
+        .download_and_install(|_chunk, _total| {}, || {})
+        .await
+        .map_err(|e| AppError::msg(format!("updater install {version}: {e}")))?;
+    app.restart()
 }
 
 pub async fn check_content_updates(app: &AppHandle) -> AppResult<Vec<ContentUpdateInfo>> {

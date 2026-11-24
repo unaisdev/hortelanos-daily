@@ -22,17 +22,12 @@ Nota técnica: el build firma la app en ad-hoc (`signingIdentity: "-"`). Sin eso
 
 ## Windows (SmartScreen)
 
-**Recomendado — portable (sin instalar):**
-1. Descarga `Hortelanos.Daily_*-x64-portable.zip`.
-2. Descomprime en una carpeta (por ejemplo Escritorio).
-3. Ejecuta `Hortelanos Daily.exe` **dejando en la misma carpeta** `shell/`, `runner/`, `shared/`, `catalog/` y `games/` (no muevas solo el `.exe`).
-4. Si aparece SmartScreen: **Más información** → **Ejecutar de todas formas**.
-5. Si la ventana se queda en «Pulsa Enter…» sin cargar texto, o dice `Not found`, el zip está incompleto o faltan esas carpetas junto al exe.
-
-**Instalador (opcional):**
-1. Ejecuta el `-setup.exe` o `.msi`.
+1. Descarga `Hortelanos.Daily_*_x64-setup.exe` y ejecútalo (se instala por usuario, no pide admin).
 2. Si aparece SmartScreen: **Más información** → **Ejecutar de todas formas**.
-3. Verifica SHA-256 del asset.
+3. Verifica SHA-256 del asset si quieres.
+
+Solo hace falta instalar **una vez**: desde entonces el launcher se actualiza solo al abrirlo (las actualizaciones no pasan por SmartScreen).
+El zip portable ya no se publica porque no puede auto-actualizarse.
 
 Hace falta **WebView2** (suele venir en Windows 10/11). Si la ventana sale en blanco: [instalar WebView2](https://developer.microsoft.com/microsoft-edge/webview2/).
 

@@ -3,6 +3,7 @@ import {
   whenDesktopReady,
   listInstalledPacks,
   checkLauncherUpdate,
+  installLauncherUpdate,
   checkContentUpdates,
   installContentPack,
   getDesktopInfo,
@@ -894,7 +895,7 @@ function paintUpdateBar({ pendingContent = pendingContentUpdates(), autoNote = '
   if (updateLauncherBtn) {
     updateLauncherBtn.hidden = !launcherReady;
     if (launcherReady) {
-      updateLauncherBtn.textContent = `Launcher ${launcherUpdate.latestVersion} → abrir release`;
+      updateLauncherBtn.textContent = `Actualizar launcher a ${launcherUpdate.latestVersion} y reiniciar`;
     }
   }
 
@@ -954,25 +955,53 @@ async function installPendingPacks(pending) {
 /** On menu open: check Releases, auto-install content packs, keep launcher as UI notice. */
 async function syncUpdatesOnOpen() {
   const { pendingContent } = await refreshUpdates();
-  if (!pendingContent.length) return;
 
-  menuStatus.textContent = 'Actualizando content packs…';
-  try {
-    await installPendingPacks(pendingContent);
-    await refreshUpdates();
-    paintUpdateBar({
-      autoNote: launcherUpdate?.updateAvailable
-        ? `Packs actualizados · launcher ${launcherUpdate.currentVersion} → ${launcherUpdate.latestVersion}`
-        : `Packs actualizados · Desktop v${desktopInfo?.launcherVersion || '?'}`,
-    });
-    menuStatus.textContent = 'Packs listos para jugar.';
-  } catch (err) {
-    menuStatus.textContent = errorText(err);
-    setUpdateStatus('Fallo al actualizar packs — pulsa U para reintentar');
-    if (updateBtn) {
-      updateBtn.hidden = false;
-      updateBtn.textContent = 'Reintentar packs (U)';
+  if (pendingContent.length) {
+    menuStatus.textContent = 'Actualizando content packs…';
+    try {
+      await installPendingPacks(pendingContent);
+      await refreshUpdates();
+      paintUpdateBar({
+        autoNote: launcherUpdate?.updateAvailable
+          ? `Packs actualizados · launcher ${launcherUpdate.currentVersion} → ${launcherUpdate.latestVersion}`
+          : `Packs actualizados · Desktop v${desktopInfo?.launcherVersion || '?'}`,
+      });
+      menuStatus.textContent = 'Packs listos para jugar.';
+    } catch (err) {
+      menuStatus.textContent = errorText(err);
+      setUpdateStatus('Fallo al actualizar packs — pulsa U para reintentar');
+      if (updateBtn) {
+        updateBtn.hidden = false;
+        updateBtn.textContent = 'Reintentar packs (U)';
+      }
     }
+  }
+
+  // Packs first (they're quick); then the launcher itself, which restarts the app.
+  if (launcherUpdate?.updateAvailable) await installLauncher();
+}
+
+/** Self-update: download + install + restart. Falls back to the release page if it fails. */
+async function installLauncher() {
+  if (!isDesktop() || updateBusy) return;
+  updateBusy = true;
+  if (updateLauncherBtn) updateLauncherBtn.disabled = true;
+  setUpdateStatus(`Actualizando launcher a ${launcherUpdate?.latestVersion || 'la última versión'}… no cierres la app`);
+  menuStatus.textContent = 'Descargando actualización del launcher…';
+  try {
+    const installed = await installLauncherUpdate();
+    // On success the app restarts before this line; null means nothing to install.
+    if (installed == null) menuStatus.textContent = 'El launcher ya está al día.';
+  } catch (err) {
+    console.warn('installLauncherUpdate', err);
+    menuStatus.textContent = `No se pudo actualizar solo (${errorText(err)}). Usa el botón para reintentar o descarga el release.`;
+    setUpdateStatus('Fallo al actualizar el launcher');
+    if (updateLauncherBtn) {
+      updateLauncherBtn.textContent = 'Reintentar actualización del launcher';
+    }
+  } finally {
+    updateBusy = false;
+    if (updateLauncherBtn) updateLauncherBtn.disabled = false;
   }
 }
 
@@ -991,7 +1020,7 @@ async function applyUpdates() {
   }
   if (!pending.length) {
     menuStatus.textContent = launcherUpdate?.updateAvailable
-      ? 'Packs al día. Hay launcher nuevo: usa «abrir release» arriba.'
+      ? 'Packs al día. Hay launcher nuevo: usa «Actualizar launcher» arriba.'
       : 'No hay packs nuevos en Releases.';
     return;
   }
@@ -1083,7 +1112,7 @@ if (updateBtn) {
 }
 if (updateLauncherBtn) {
   updateLauncherBtn.addEventListener('click', () => {
-    openLauncherRelease();
+    installLauncher();
   });
 }
 
