@@ -1,3 +1,4 @@
+import { autoFitText } from './fit-text.js';
 import { openInstagramProfile, createAvatar } from './player-modal.js';
 import { normalizeInstagram, formatInstagram } from './ranking-client.js';
 
@@ -71,6 +72,7 @@ export function mountProfilePreview(container) {
   info.className = 'profile-preview-info';
   const name = document.createElement('p');
   name.className = 'profile-preview-name';
+  autoFitText(name);
   const hint = document.createElement('p');
   hint.className = 'profile-preview-hint';
   const actions = document.createElement('div');

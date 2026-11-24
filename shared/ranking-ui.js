@@ -1,3 +1,4 @@
+import { autoFitText } from './fit-text.js';
 import {
   clearInstagram,
   fetchAllTimeRanking,
@@ -50,6 +51,7 @@ function appendRankingItems(ol, entries, highlight, ctx = {}) {
     who.title = 'Ver perfil';
     const name = document.createElement('span');
     name.className = 'ranking-handle-name';
+    autoFitText(name);
     name.textContent = entry.display || formatInstagram(handle);
     who.append(createAvatar(handle), name);
     who.addEventListener('click', () => {

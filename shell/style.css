@@ -488,9 +488,11 @@ body {
   letter-spacing: 0.02em;
   color: #e8fff0;
   line-height: 1.15;
-  /* The @ must always be fully readable: wrap instead of truncating. */
-  overflow-wrap: anywhere;
-  white-space: normal;
+  /* The @ always stays on ONE line: shared/fit-text.js shrinks the font when it is long. */
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .player-ig-edit {
@@ -654,9 +656,11 @@ body {
 }
 
 .ranking-handle-name {
-  /* The @ must always be fully readable: wrap instead of truncating. */
-  overflow-wrap: anywhere;
-  white-space: normal;
+  /* The @ always stays on ONE line: shared/fit-text.js shrinks the font when it is long. */
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
   min-width: 0;
 }
 
@@ -1818,9 +1822,11 @@ body {
   margin: 0;
   font-size: 15px;
   color: var(--amber);
-  /* The @ must always be fully readable: wrap instead of truncating. */
-  overflow-wrap: anywhere;
-  white-space: normal;
+  /* The @ always stays on ONE line: shared/fit-text.js shrinks the font when it is long. */
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .profile-preview-name.is-empty {
@@ -1867,4 +1873,13 @@ body {
 .player-ig-card-avatar {
   flex: none;
   display: flex;
+}
+
+/* Player card title: the @ stays on one line (shared/fit-text.js shrinks it if needed). */
+.player-modal .help-modal-head h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }

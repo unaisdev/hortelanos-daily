@@ -25,6 +25,7 @@ import {
 import { identityErrorMessage, uploadAvatar } from '../shared/ranking-client.js';
 import { createAvatar, setGameNames } from '../shared/player-modal.js';
 import { mountProfilePreview, pickPhoto } from '../shared/avatar-picker.js';
+import { autoFitText } from '../shared/fit-text.js';
 
 window.__hortelanoShellReady = true;
 
@@ -57,6 +58,7 @@ const displayRepo = document.getElementById('display-repo');
 const igStatus = document.getElementById('ig-status');
 const igCard = document.getElementById('ig-card');
 const igCardHandle = document.getElementById('ig-card-handle');
+if (igCardHandle) autoFitText(igCardHandle, { minPx: 7 });
 const igCta = document.getElementById('ig-cta');
 const igCtaOpen = document.getElementById('ig-cta-open');
 const igEdit = document.getElementById('ig-edit');
