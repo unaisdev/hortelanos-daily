@@ -3,7 +3,7 @@
   "launcher": {
     "id": "hortelanos-daily",
     "name": "Hortelano's Daily",
-    "version": "2.2.7",
+    "version": "2.2.8",
     "minProtocolAdapters": [
       "dailyred-conf-v2+status-v1",
       "dailymax-conf-v1+status-v1"
