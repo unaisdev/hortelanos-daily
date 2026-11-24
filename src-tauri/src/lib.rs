@@ -40,9 +40,9 @@ use crate::updates::{
 
 #[tauri::command]
 fn get_desktop_info(app: AppHandle) -> AppResult<DesktopInfo> {
-    let catalog = packs::read_catalog(&app)?;
     Ok(DesktopInfo {
-        launcher_version: catalog.launcher.version,
+        // Real binary version (Tauri), not the catalog's — the catalog can lag behind.
+        launcher_version: app.package_info().version.to_string(),
         app_data: paths::app_data_root(&app)?.display().to_string(),
         platform: std::env::consts::OS.to_string(),
     })
@@ -66,6 +66,13 @@ fn verify_file_sha256(path: String, expected: String) -> AppResult<()> {
 #[tauri::command]
 async fn check_launcher_update(app: AppHandle) -> AppResult<LauncherUpdateInfo> {
     updates::check_launcher_update(&app).await
+}
+
+/// Download, verify (Ed25519 key in tauri.conf.json) and install the new launcher,
+/// then restart. Errors bubble up so the UI can fall back to "open release".
+#[tauri::command]
+async fn install_launcher_update(app: AppHandle) -> AppResult<Option<String>> {
+    updates::install_launcher_update(&app).await
 }
 
 #[tauri::command]
@@ -103,12 +110,14 @@ fn save_player_stats(app: AppHandle, key: String, stats: Value) -> AppResult<()>
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             get_desktop_info,
             list_installed_packs,
             seed_local_packs,
             verify_file_sha256,
             check_launcher_update,
+            install_launcher_update,
             check_content_updates,
             install_content_pack,
             open_external_url,

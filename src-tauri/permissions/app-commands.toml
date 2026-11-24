@@ -7,6 +7,7 @@ commands.allow = [
   "seed_local_packs",
   "verify_file_sha256",
   "check_launcher_update",
+  "install_launcher_update",
   "check_content_updates",
   "install_content_pack",
   "open_external_url",

@@ -28,7 +28,9 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            args: ''
+            args: '--target aarch64-apple-darwin'
+          - platform: macos-13
+            args: '--target x86_64-apple-darwin'
           - platform: ubuntu-22.04
             args: ''
           - platform: windows-latest
@@ -48,6 +50,8 @@ jobs:
           node-version: 22
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Install frontend deps
         run: npm ci
@@ -68,21 +72,23 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # Updater signing key (Ed25519, ours — not an Apple/Microsoft certificate).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
           releaseName: Hortelano's Daily ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
-          includeUpdaterJson: false
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
 
       - name: Verify macOS ad-hoc signature
         if: runner.os == 'macOS'
         run: |
           set -euo pipefail
-          DMG=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' | head -1 || true)
-          APP=$(find src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1 || true)
+          DMG=$(find src-tauri/target/*/release/bundle/dmg -name '*.dmg' | head -1 || true)
+          APP=$(find src-tauri/target/*/release/bundle/macos -maxdepth 1 -name '*.app' | head -1 || true)
           MOUNT=""
           cleanup() {
             if [ -n "${MOUNT}" ]; then hdiutil detach "${MOUNT}" -force >/dev/null 2>&1 || true; fi
@@ -103,91 +109,6 @@ jobs:
           codesign -dv --verbose=2 "${APP}"
           test -f "${APP}/Contents/_CodeSignature/CodeResources"
           echo "macOS ad-hoc signature OK"
-
-      - name: Package Windows portable ZIP
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          # On Windows, Tauri resource_dir() is the folder that contains the exe.
-          # Assets (shell/, runner/, …) must sit next to Hortelanos Daily.exe — NOT under resources/.
-          $stage = "portable/Hortelanos Daily"
-          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
-
-          $exe = Get-ChildItem "src-tauri/target/release/*.exe" |
-            Where-Object { $_.Name -notlike '*setup*' -and $_.Name -notlike '*uninstall*' } |
-            Select-Object -First 1
-          if (-not $exe) { throw "No release exe found under src-tauri/target/release" }
-          Copy-Item $exe.FullName -Destination (Join-Path $stage "Hortelanos Daily.exe")
-
-          # Prefer files Tauri already staged next to the release binary.
-          $assetRoots = @(
-            "src-tauri/target/release",
-            "desktop-www"
-          )
-          # shared/ is required since 2.0.0 (shell + runner import ranking modules from it).
-          $required = @('shell','runner','shared','catalog','games')
-          $optional = @('docs','index.html')
-          $copied = @{}
-          foreach ($root in $assetRoots) {
-            foreach ($name in ($required + $optional)) {
-              if ($copied.ContainsKey($name)) { continue }
-              $src = Join-Path $root $name
-              if (Test-Path $src) {
-                Copy-Item $src -Destination (Join-Path $stage $name) -Recurse -Force
-                $copied[$name] = $true
-              }
-            }
-          }
-          foreach ($name in $required) {
-            if (-not $copied.ContainsKey($name)) {
-              throw "Portable pack missing required asset '$name' (looked in target/release and desktop-www)"
-            }
-          }
-          $shellIndex = Join-Path $stage "shell/index.html"
-          if (-not (Test-Path $shellIndex)) {
-            throw "Portable pack incomplete: shell/index.html missing"
-          }
-          $sharedRanking = Join-Path $stage "shared/ranking-ui.js"
-          if (-not (Test-Path $sharedRanking)) {
-            throw "Portable pack incomplete: shared/ranking-ui.js missing"
-          }
-
-          # Sidecar DLLs if present (WebView2 loader, etc.)
-          Get-ChildItem "src-tauri/target/release/*.dll" -ErrorAction SilentlyContinue |
-            ForEach-Object { Copy-Item $_.FullName -Destination (Join-Path $stage $_.Name) -Force }
-
-          $readme = @(
-            "Hortelano's Daily - Windows portable",
-            "====================================",
-            "1. Unzip this folder anywhere.",
-            "2. Run Hortelanos Daily.exe.",
-            "3. Keep shell/, runner/, shared/, catalog/, games/ next to the exe (same folder).",
-            "4. Needs Microsoft Edge WebView2 (usually already on Windows 10/11).",
-            "5. Unsigned build: SmartScreen -> More info -> Run anyway."
-          ) -join "`n"
-          Set-Content -Path (Join-Path $stage "README-portable.txt") -Value $readme -Encoding UTF8
-
-          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $zip = "Hortelanos.Daily_${ver}_x64-portable.zip"
-          if (Test-Path $zip) { Remove-Item $zip -Force }
-          Compress-Archive -Path $stage -DestinationPath $zip -Force
-
-          # Sanity: zip must include shell + shared modules, not just the exe
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $entries = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip)).Entries.FullName
-          if (-not ($entries | Where-Object { $_ -match 'shell[/\\]index\.html$' })) {
-            throw "Portable ZIP missing shell/index.html"
-          }
-          if (-not ($entries | Where-Object { $_ -match 'shared[/\\]ranking-ui\.js$' })) {
-            throw "Portable ZIP missing shared/ranking-ui.js"
-          }
-          Write-Host "Portable entries: $($entries.Count)"
-          gh release upload "$env:RELEASE_TAG" $zip --clobber
 
   checksums:
     needs: build

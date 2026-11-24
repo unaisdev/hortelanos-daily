@@ -70,6 +70,11 @@ export async function checkLauncherUpdate() {
   return invoke('check_launcher_update', {}, 8000);
 }
 
+/** Downloads + installs the new launcher and restarts the app (never resolves on success). */
+export async function installLauncherUpdate() {
+  return invoke('install_launcher_update', {}, 10 * 60 * 1000);
+}
+
 export async function checkContentUpdates() {
   return invoke('check_content_updates', {}, 8000);
 }
