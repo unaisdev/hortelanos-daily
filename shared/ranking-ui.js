@@ -53,7 +53,8 @@ function appendRankingItems(ol, entries, highlight, ctx = {}) {
     name.className = 'ranking-handle-name';
     autoFitText(name);
     name.textContent = entry.display || formatInstagram(handle);
-    who.append(createAvatar(handle), name);
+    // `photo: true` layers the player's picture over the coloured initial (404 ⇒ initial stays).
+    who.append(createAvatar(handle, { photo: true }), name);
     who.addEventListener('click', () => {
       void openPlayerModal(handle, { gameId: ctx.profileGameId || '' });
     });
