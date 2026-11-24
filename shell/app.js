@@ -11,14 +11,19 @@ import {
 } from './desktop.js';
 import {
   formatInstagram,
+  loadAllTimeRankingInto,
   loadInstagram,
   loadInstagramDeclined,
   loadRankingInto,
+  normalizeInstagram,
   rankingEnabled,
   saveInstagram,
   setIdentity,
   setInstagramDeclined,
 } from '../shared/ranking-ui.js';
+import { identityErrorMessage, uploadAvatar } from '../shared/ranking-client.js';
+import { createAvatar, setGameNames } from '../shared/player-modal.js';
+import { mountProfilePreview, pickPhoto } from '../shared/avatar-picker.js';
 
 window.__hortelanoShellReady = true;
 
@@ -48,15 +53,26 @@ const displayBoss = document.getElementById('display-boss');
 const displayBlurb = document.getElementById('display-blurb');
 const displayMeta = document.getElementById('display-meta');
 const displayRepo = document.getElementById('display-repo');
-const igInput = document.getElementById('ig-input');
-const igSave = document.getElementById('ig-save');
 const igStatus = document.getElementById('ig-status');
 const igCard = document.getElementById('ig-card');
 const igCardHandle = document.getElementById('ig-card-handle');
-const igForm = document.getElementById('ig-form');
 const igCta = document.getElementById('ig-cta');
 const igCtaOpen = document.getElementById('ig-cta-open');
 const igEdit = document.getElementById('ig-edit');
+const igPhoto = document.getElementById('ig-photo');
+const igCardAvatar = document.getElementById('ig-card-avatar');
+const onboardPreview = document.getElementById('ig-onboard-preview')
+  ? mountProfilePreview(document.getElementById('ig-onboard-preview'))
+  : null;
+const editPreview = document.getElementById('ig-edit-preview')
+  ? mountProfilePreview(document.getElementById('ig-edit-preview'))
+  : null;
+const igEditModal = document.getElementById('ig-edit-modal');
+const igEditCurrent = document.getElementById('ig-edit-current');
+const igEditInput = document.getElementById('ig-edit-input');
+const igEditStatus = document.getElementById('ig-edit-status');
+const igEditConfirm = document.getElementById('ig-edit-confirm');
+const igEditCancel = document.getElementById('ig-edit-cancel');
 const igOnboardModal = document.getElementById('ig-onboard-modal');
 const igOnboardInput = document.getElementById('ig-onboard-input');
 const igOnboardStatus = document.getElementById('ig-onboard-status');
@@ -69,6 +85,8 @@ const igOnboardSkip = document.getElementById('ig-onboard-skip');
 const rankingPanel = document.getElementById('ranking-panel');
 const rankingBoard = document.getElementById('ranking-board');
 const rankingStatus = document.getElementById('ranking-status');
+const rankingTitle = document.getElementById('ranking-title');
+const rankingTabs = document.querySelectorAll('[data-rank-tab]');
 
 const LINES = [
   'HORTELANO BIOS v1.0',
@@ -282,40 +300,30 @@ function localToday() {
 
 let igOnboardResolver = null;
 let igOnboardMode = 'launch'; // 'launch' | 'menu'
-let igEditing = false;
 
 function hideIgPanels() {
   if (igCard) igCard.hidden = true;
   if (igCta) igCta.hidden = true;
-  if (igForm) igForm.hidden = true;
 }
 
+/** Cache-buster for the session avatar; bumped after the photo changes. */
+let avatarBust = '';
+
 function showIgSession(handle) {
-  igEditing = false;
   hideIgPanels();
   if (igCardHandle) igCardHandle.textContent = formatInstagram(handle);
+  if (igCardAvatar) {
+    igCardAvatar.replaceChildren(createAvatar(handle, { photo: true, size: 'md', bust: avatarBust }));
+  }
   if (igCard) igCard.hidden = false;
-  if (igInput) igInput.value = handle;
 }
 
 function showIgCta() {
-  igEditing = false;
   hideIgPanels();
   if (igCta) igCta.hidden = false;
 }
 
-function showIgForm(prefill = '') {
-  igEditing = true;
-  hideIgPanels();
-  if (igForm) igForm.hidden = false;
-  if (igInput) {
-    igInput.value = prefill;
-    queueMicrotask(() => igInput.focus());
-  }
-}
-
 function syncIgUi(statusText = '') {
-  igEditing = false;
   const saved = loadInstagram();
   if (saved) showIgSession(saved);
   else if (loadInstagramDeclined()) showIgCta();
@@ -345,6 +353,7 @@ function openIgOnboard({ mode = 'launch' } = {}) {
   if (igOnboardResolver) return Promise.resolve({ joined: Boolean(loadInstagram()), skipped: false });
   igOnboardMode = mode;
   if (igOnboardInput) igOnboardInput.value = '';
+  onboardPreview?.reset();
   if (igOnboardSave) {
     igOnboardSave.disabled = false;
     igOnboardSave.textContent = mode === 'launch' ? 'Guardar y jugar' : 'Guardar';
@@ -356,54 +365,123 @@ function openIgOnboard({ mode = 'launch' } = {}) {
   });
 }
 
-async function persistInstagram(raw, { statusEl, saveBtn, playLabel = false } = {}) {
-  const handle = saveInstagram(raw || '');
+/**
+ * Registers / renames the @ on the server FIRST and only then keeps it locally, so a handle the
+ * server rejected (taken, burned, rename limit) never ends up as "my session".
+ * If the server rejects but names the @ it has for this device, local state is re-synced to it.
+ */
+async function persistInstagram(raw, { statusEl, saveBtn, playLabel = false, photo = '' } = {}) {
+  const handle = normalizeInstagram(raw || '');
   if (!handle) {
-    if (statusEl) statusEl.textContent = 'Handle inválido (letras, números, . y _).';
+    if (statusEl) statusEl.textContent = identityErrorMessage('invalid_instagram');
     return { ok: false, error: 'invalid' };
   }
+  const previous = loadInstagram();
   if (statusEl) statusEl.textContent = 'Guardando…';
   if (saveBtn) saveBtn.disabled = true;
   try {
     const identity = await setIdentity({ instagram: handle });
     if (!identity.ok) {
-      if (identity.error === 'rename_limit') {
-        const left = identity.renames_left ?? 0;
-        const current = identity.instagram
-          ? saveInstagram(identity.instagram)
-          : loadInstagram();
-        if (statusEl) {
-          statusEl.textContent = `Solo 2 cambios de @ al día. Te quedan ${left}.`;
-        }
-        if (current) {
-          setInstagramDeclined(false);
-          showIgSession(current);
-        }
-        return { ok: false, error: 'rename_limit', handle: current };
-      }
       if (identity.disabled) {
+        saveInstagram(handle);
         setInstagramDeclined(false);
         showIgSession(handle);
         if (statusEl) statusEl.textContent = `Guardado local ${formatInstagram(handle)}`;
         return { ok: true, handle, localOnly: true };
       }
-      if (statusEl) statusEl.textContent = 'No se pudo registrar en el servidor. Reintenta.';
-      return { ok: false, error: identity.error || 'server' };
+      const offline = identity.error === 'network' || identity.error === 'timeout';
+      if (offline && !previous) {
+        // First-time join while offline: keep it locally, the server claims it on the first win.
+        saveInstagram(handle);
+        setInstagramDeclined(false);
+        showIgSession(handle);
+        if (statusEl) statusEl.textContent = 'Sin conexión: se registrará cuando ganes.';
+        return { ok: true, handle, localOnly: true };
+      }
+      const current = identity.instagram ? saveInstagram(identity.instagram) : previous;
+      if (statusEl) {
+        statusEl.textContent = identity.error === 'rename_limit'
+          ? `${identityErrorMessage('rename_limit')} (te quedan ${identity.renames_left ?? 0})`
+          : identityErrorMessage(identity.error);
+      }
+      if (current) {
+        setInstagramDeclined(false);
+        showIgSession(current);
+      }
+      return { ok: false, error: identity.error || 'server', handle: current };
     }
+    saveInstagram(handle);
     setInstagramDeclined(false);
     const left = identity.renames_left ?? 0;
+    let photoNote = '';
+    if (photo) {
+      // The photo needs the @ registered first; a failed upload never blocks joining.
+      const up = await uploadAvatar(photo);
+      if (up.ok) avatarBust = String(Date.now());
+      else photoNote = ' · no se pudo subir la foto';
+    }
     if (statusEl) {
-      statusEl.textContent = playLabel
+      statusEl.textContent = (playLabel
         ? `Listo ${formatInstagram(handle)}`
         : identity.changed
           ? `Sesión ${formatInstagram(handle)} · ${left} cambios restantes hoy`
-          : `Sesión ${formatInstagram(handle)}`;
+          : `Sesión ${formatInstagram(handle)}`) + photoNote;
     }
     showIgSession(handle);
     refreshShellRanking();
-    return { ok: true, handle };
+    return { ok: true, handle, changed: Boolean(identity.changed), renamesLeft: left };
   } finally {
     if (saveBtn) saveBtn.disabled = false;
+  }
+}
+
+/** Changes only the photo of the current @ (no rename, no limit involved). */
+async function changePhoto() {
+  const handle = loadInstagram();
+  if (!handle) return;
+  try {
+    const photo = await pickPhoto();
+    if (!photo) return;
+    if (igStatus) igStatus.textContent = 'Subiendo foto…';
+    const up = await uploadAvatar(photo);
+    if (!up.ok) {
+      if (igStatus) igStatus.textContent = identityErrorMessage(up.error);
+      return;
+    }
+    avatarBust = String(Date.now());
+    showIgSession(handle);
+    if (igStatus) igStatus.textContent = 'Foto actualizada.';
+  } catch {
+    if (igStatus) igStatus.textContent = identityErrorMessage('invalid_image');
+  }
+}
+
+function openIgEdit() {
+  if (!igEditModal) return;
+  if (igEditCurrent) igEditCurrent.textContent = formatInstagram(loadInstagram());
+  if (igEditInput) igEditInput.value = '';
+  editPreview?.reset();
+  if (igEditStatus) igEditStatus.textContent = '';
+  if (igEditConfirm) igEditConfirm.disabled = false;
+  if (!igEditModal.open) igEditModal.showModal();
+  queueMicrotask(() => igEditInput?.focus());
+}
+
+async function confirmIgEdit() {
+  const next = normalizeInstagram(igEditInput?.value || '');
+  if (next && next === loadInstagram()) {
+    if (igEditStatus) igEditStatus.textContent = 'Ese ya es tu @ actual.';
+    return;
+  }
+  const result = await persistInstagram(igEditInput?.value || '', {
+    statusEl: igEditStatus,
+    saveBtn: igEditConfirm,
+    photo: editPreview?.getPhoto() || '',
+  });
+  if (!result.ok) return;
+  if (igEditModal?.open) igEditModal.close();
+  if (igStatus) {
+    igStatus.textContent = `Ahora eres ${formatInstagram(result.handle)} · ${result.renamesLeft ?? 0} cambios restantes hoy`;
   }
 }
 
@@ -415,21 +493,20 @@ function finishIgDeclined() {
 }
 
 function initPlayerIg() {
-  if (!igCard && !igCta && !igForm) return;
+  if (!igCard && !igCta) return;
   syncIgUi('');
 
-  igSave?.addEventListener('click', () => {
-    void persistInstagram(igInput?.value || '', { statusEl: igStatus, saveBtn: igSave });
-  });
-  igInput?.addEventListener('keydown', (event) => {
+  igEdit?.addEventListener('click', () => openIgEdit());
+  igOnboardInput?.addEventListener('input', () => onboardPreview?.setHandle(igOnboardInput.value));
+  igEditInput?.addEventListener('input', () => editPreview?.setHandle(igEditInput.value));
+  igPhoto?.addEventListener('click', () => void changePhoto());
+  igEditConfirm?.addEventListener('click', () => void confirmIgEdit());
+  igEditCancel?.addEventListener('click', () => igEditModal?.close());
+  igEditInput?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      void persistInstagram(igInput?.value || '', { statusEl: igStatus, saveBtn: igSave });
+      void confirmIgEdit();
     }
-  });
-  igEdit?.addEventListener('click', () => {
-    showIgForm(loadInstagram() || '');
-    if (igStatus) igStatus.textContent = 'Máximo 2 cambios de @ por día.';
   });
   igCtaOpen?.addEventListener('click', () => {
     void openIgOnboard({ mode: 'menu' }).then((result) => {
@@ -449,6 +526,7 @@ function initPlayerIg() {
         statusEl: igOnboardStatus,
         saveBtn: igOnboardSave,
         playLabel: igOnboardMode === 'launch',
+        photo: onboardPreview?.getPhoto() || '',
       });
       if (!result.ok) return;
       if (igOnboardSave) {
@@ -481,19 +559,63 @@ async function ensureIgBeforeLaunch(gameId) {
 }
 
 let rankingRequest = 0;
+/** 'today' = who won today in the selected ROM; 'all' = most wins ever (all ROMs). */
+let rankingTab = 'today';
 
-async function refreshShellRanking() {
+function syncRankingTabs() {
+  rankingTabs.forEach((tab) => {
+    const active = tab.dataset.rankTab === rankingTab;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+  });
+  if (rankingTitle) rankingTitle.textContent = rankingTab === 'all' ? 'Más victorias' : 'Han ganado hoy';
+}
+
+async function renderShellRanking(requestId) {
   const game = games[selected];
   if (!rankingPanel || !rankingBoard) return;
-  const requestId = ++rankingRequest;
+  // Switching ROM: drop the previous ROM's board right away; the loader re-shows it if enabled.
   if (rankingPanel.dataset.gameId !== game?.id) rankingPanel.hidden = true;
   if (!game) return;
   rankingPanel.dataset.gameId = game.id;
-  await loadRankingInto(rankingBoard, rankingStatus, game.id, localToday(), {
-    modalTitle: `${game.name} · hoy`,
-    isCurrent: () => requestId === rankingRequest,
-  });
+  setGameNames(Object.fromEntries(games.map((g) => [g.id, g.name])));
+  syncRankingTabs();
+  const isCurrent = () => requestId === rankingRequest;
+  if (rankingTab === 'all') {
+    await loadAllTimeRankingInto(rankingBoard, rankingStatus, game.id, {
+      modalTitle: 'Más victorias',
+      isCurrent,
+    });
+  } else {
+    await loadRankingInto(rankingBoard, rankingStatus, game.id, localToday(), {
+      modalTitle: `${game.name} · hoy`,
+      isCurrent,
+    });
+  }
 }
+
+let rankingChain = Promise.resolve();
+
+/**
+ * Reloads run one after another; a refresh superseded before it starts is skipped, and one
+ * superseded while loading (`isCurrent`) doesn't paint over the newer board.
+ */
+function refreshShellRanking() {
+  const id = ++rankingRequest;
+  rankingChain = rankingChain
+    .then(() => (id === rankingRequest ? renderShellRanking(id) : undefined))
+    .catch(() => {});
+  return rankingChain;
+}
+
+rankingTabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    const next = tab.dataset.rankTab === 'all' ? 'all' : 'today';
+    if (next === rankingTab) return;
+    rankingTab = next;
+    void refreshShellRanking();
+  });
+});
 
 window.addEventListener('focus', () => {
   if (games[selected]?.id === 'dailysteven') void refreshShellRanking();
