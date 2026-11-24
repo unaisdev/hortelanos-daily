@@ -488,9 +488,9 @@ body {
   letter-spacing: 0.02em;
   color: #e8fff0;
   line-height: 1.15;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* The @ must always be fully readable: wrap instead of truncating. */
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .player-ig-edit {
@@ -654,9 +654,9 @@ body {
 }
 
 .ranking-handle-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* The @ must always be fully readable: wrap instead of truncating. */
+  overflow-wrap: anywhere;
+  white-space: normal;
   min-width: 0;
 }
 
@@ -1798,9 +1798,9 @@ body {
   margin: 0;
   font-size: 15px;
   color: var(--amber);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* The @ must always be fully readable: wrap instead of truncating. */
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .profile-preview-name.is-empty {

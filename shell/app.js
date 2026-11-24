@@ -963,7 +963,6 @@ async function syncUpdatesOnOpen() {
           ? `Packs actualizados · launcher ${launcherUpdate.currentVersion} → ${launcherUpdate.latestVersion}`
           : `Packs actualizados · Desktop v${desktopInfo?.launcherVersion || '?'}`,
       });
-      menuStatus.textContent = 'Packs listos para jugar.';
     } catch (err) {
       menuStatus.textContent = errorText(err);
       setUpdateStatus('Fallo al actualizar packs — pulsa U para reintentar');
