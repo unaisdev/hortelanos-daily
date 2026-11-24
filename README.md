@@ -55,7 +55,7 @@ npm run desktop:build:debug  # instalable debug (nombre e identifier distintos)
 ```
 
 - Builds **unsigned** por plataforma (macOS / Windows / Ubuntu). Guía: [docs/UNSIGNED_INSTALL.md](docs/UNSIGNED_INSTALL.md).
-- En Windows usa el **instalador** (`*-setup.exe`, instala por usuario sin admin). El zip portable ya no se publica: no puede auto-actualizarse.
+- En Windows hay **portable** (`*-x64-portable.zip`: descomprimir y ejecutar, sin instalador, se auto-actualiza en su carpeta con `src-tauri/src/portable.rs`) además del setup (que usa el updater oficial de Tauri).
 - Updates vía GitHub Releases: launcher (`v*`) + content packs (`content-v*` en cada repo de juego).
 - En el menú desktop: al abrir comprueba Releases, **auto-instala** content packs nuevos (**U** reintenta) y **auto-actualiza el launcher** (descarga, verifica con la clave del updater, instala y reinicia). Si falla, la barra ofrece reintentar.
 - Detalle Rust/IPC: [src-tauri/README.md](src-tauri/README.md).

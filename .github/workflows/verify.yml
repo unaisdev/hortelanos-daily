@@ -46,3 +46,16 @@ jobs:
       - name: cargo check
         working-directory: src-tauri
         run: cargo check
+
+  # The portable self-updater (src-tauri/src/portable.rs) has Windows-only code and relies on
+  # Windows rename semantics, so compile and test it on Windows too.
+  tauri-test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test
