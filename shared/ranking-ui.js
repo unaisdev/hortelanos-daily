@@ -1,3 +1,4 @@
+import { autoFitText } from './fit-text.js';
 import {
   clearInstagram,
   fetchAllTimeRanking,
@@ -74,8 +75,10 @@ function appendRankingItems(ol, entries, highlight, ctx = {}) {
     who.title = 'Ver perfil';
     const name = document.createElement('span');
     name.className = 'ranking-handle-name';
+    autoFitText(name);
     name.textContent = entry.display || formatInstagram(handle);
-    who.append(createAvatar(handle), name);
+    // `photo: true` layers the player's picture over the coloured initial (404 ⇒ initial stays).
+    who.append(createAvatar(handle, { photo: true }), name);
     who.addEventListener('click', () => {
       void openPlayerModal(handle, { gameId: ctx.profileGameId || '' });
     });

@@ -28,6 +28,8 @@ mime_guess = "2"
 tokio = { version = "1", features = ["sync", "fs", "rt-multi-thread", "macros"] }
 futures-util = "0.3"
 semver = "1"
+minisign-verify = "0.3"
+base64 = "0.22"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

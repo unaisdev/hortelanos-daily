@@ -23,7 +23,7 @@ la release.
 
 ## Descarga
 
-- En Windows: descarga el instalador (`-setup.exe`). Solo se instala una vez; después el launcher se actualiza solo al abrirlo.
+- En Windows: baja el zip portable, descomprímelo y ábrelo. No hace falta instalar nada y se actualiza solo.
 ```
 
 La sección **Novedades** es lo único que importa en la app.

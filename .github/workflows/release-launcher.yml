@@ -111,6 +111,94 @@ jobs:
           test -f "${APP}/Contents/_CodeSignature/CodeResources"
           echo "macOS ad-hoc signature OK"
 
+      - name: Package Windows portable ZIP (signed, self-updating)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.sha) }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # On Windows, Tauri resource_dir() is the folder that contains the exe.
+          # Assets (shell/, runner/, …) must sit next to Hortelanos Daily.exe — NOT under resources/.
+          $stage = "portable/Hortelanos Daily"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          $exe = Get-ChildItem "src-tauri/target/release/*.exe" |
+            Where-Object { $_.Name -notlike '*setup*' -and $_.Name -notlike '*uninstall*' } |
+            Select-Object -First 1
+          if (-not $exe) { throw "No release exe found under src-tauri/target/release" }
+          # The exe name must match ZIP_EXE_NAME in src-tauri/src/portable.rs.
+          Copy-Item $exe.FullName -Destination (Join-Path $stage "Hortelanos Daily.exe")
+
+          $required = @('shell','runner','shared','catalog','games')
+          $optional = @('docs','index.html')
+          $copied = @{}
+          foreach ($root in @("src-tauri/target/release", "desktop-www")) {
+            foreach ($name in ($required + $optional)) {
+              if ($copied.ContainsKey($name)) { continue }
+              $src = Join-Path $root $name
+              if (Test-Path $src) {
+                Copy-Item $src -Destination (Join-Path $stage $name) -Recurse -Force
+                $copied[$name] = $true
+              }
+            }
+          }
+          foreach ($name in $required) {
+            if (-not $copied.ContainsKey($name)) {
+              throw "Portable pack missing required asset '$name' (looked in target/release and desktop-www)"
+            }
+          }
+          if (-not (Test-Path (Join-Path $stage "shell/index.html"))) { throw "Portable pack incomplete: shell/index.html missing" }
+          if (-not (Test-Path (Join-Path $stage "shared/ranking-ui.js"))) { throw "Portable pack incomplete: shared/ranking-ui.js missing" }
+
+          Get-ChildItem "src-tauri/target/release/*.dll" -ErrorAction SilentlyContinue |
+            ForEach-Object { Copy-Item $_.FullName -Destination (Join-Path $stage $_.Name) -Force }
+
+          # Marker: tells the app it runs from an unzipped folder, so it self-updates this folder
+          # (src-tauri/src/portable.rs) instead of using the installer-based updater.
+          Set-Content -Path (Join-Path $stage "portable.txt") -Value "Portable build: updates itself in place. Delete this file to disable that." -Encoding utf8NoBOM
+
+          $readme = @(
+            "Hortelano's Daily - Windows portable",
+            "====================================",
+            "1. Unzip this folder anywhere you can write to (not Program Files).",
+            "2. Run Hortelanos Daily.exe.",
+            "3. Keep shell/, runner/, shared/, catalog/, games/ next to the exe (same folder).",
+            "4. It updates itself when you open it; no need to download a new zip.",
+            "5. Needs Microsoft Edge WebView2 (usually already on Windows 10/11).",
+            "6. Unsigned build: SmartScreen -> More info -> Run anyway."
+          ) -join "`n"
+          Set-Content -Path (Join-Path $stage "README-portable.txt") -Value $readme -Encoding utf8NoBOM
+
+          $ver = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $zip = "Hortelanos.Daily_${ver}_x64-portable.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path $stage -DestinationPath $zip -Force
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $entries = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip)).Entries.FullName
+          foreach ($needle in @('shell[/\\]index\.html$', 'shared[/\\]ranking-ui\.js$', 'portable\.txt$', 'Hortelanos Daily\.exe$')) {
+            if (-not ($entries | Where-Object { $_ -match $needle })) { throw "Portable ZIP missing $needle" }
+          }
+          Write-Host "Portable entries: $($entries.Count)"
+
+          # Sign with the updater key and publish the manifest the app reads.
+          npx tauri signer sign $zip
+          if ($LASTEXITCODE -ne 0) { throw "tauri signer sign failed" }
+          $sig = (Get-Content "$zip.sig" -Raw).Trim()
+          $manifest = [ordered]@{
+            version   = $ver
+            url       = "https://github.com/${{ github.repository }}/releases/download/$env:RELEASE_TAG/$zip"
+            signature = $sig
+          } | ConvertTo-Json
+          Set-Content -Path portable.json -Value $manifest -Encoding utf8NoBOM
+
+          gh release upload "$env:RELEASE_TAG" $zip "$zip.sig" portable.json --clobber
+
   checksums:
     needs: build
     if: github.ref_type == 'tag'

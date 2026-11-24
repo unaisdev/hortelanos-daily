@@ -1,3 +1,4 @@
+import { autoFitText } from './fit-text.js';
 import { avatarUrl, fetchPlayer, formatInstagram, normalizeInstagram } from './ranking-client.js';
 import { isDesktop, openExternalUrl } from '../shell/desktop.js';
 
@@ -176,6 +177,7 @@ export async function openPlayerModal(handle, { gameId = '' } = {}) {
   if (!clean) return;
   const dialog = ensureModal();
   const title = dialog.querySelector('#player-modal-title');
+  autoFitText(title, { minPx: 7 });
   const body = dialog.querySelector('.player-modal-body');
   title.textContent = formatInstagram(clean);
   showMessage(body, 'Cargando…');

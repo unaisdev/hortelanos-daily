@@ -1,6 +1,7 @@
 mod error;
 mod packs;
 mod paths;
+mod portable;
 mod server;
 mod stats;
 mod updates;
@@ -126,6 +127,10 @@ pub fn run() {
         ])
         .setup(|app| {
             let handle = app.handle().clone();
+            // Portable build: drop `.old` files left by the previous self-update.
+            if portable::is_portable() {
+                portable::cleanup_leftovers();
+            }
             // Seed app-data from bundled packs so updates have a writable tree.
             let _ = updates::seed_bundled_packs(&handle);
 
