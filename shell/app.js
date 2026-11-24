@@ -21,6 +21,7 @@ import {
   saveInstagram,
   setIdentity,
   setInstagramDeclined,
+  setStatusText,
 } from '../shared/ranking-ui.js';
 import { identityErrorMessage, uploadAvatar } from '../shared/ranking-client.js';
 import { createAvatar, setGameNames } from '../shared/player-modal.js';
@@ -39,8 +40,6 @@ const updateStatus = document.getElementById('update-status');
 const updateBtn = document.getElementById('update-btn');
 const updateLauncherBtn = document.getElementById('update-launcher-btn');
 const changelogBtn = document.getElementById('changelog-btn');
-const changelogFoot = document.getElementById('changelog-foot');
-const changelogFootBtn = document.getElementById('changelog-foot-btn');
 const changelogModal = document.getElementById('changelog-modal');
 const changelogModalClose = document.getElementById('changelog-modal-close');
 const changelogModalBody = document.getElementById('changelog-modal-body');
@@ -252,7 +251,6 @@ function showMenu() {
   shell.dataset.screen = 'menu';
   renderList();
   if (isDesktop()) {
-    if (changelogFoot) changelogFoot.hidden = false;
     syncUpdatesOnOpen().catch((err) => {
       console.warn('syncUpdatesOnOpen', err);
       setUpdateStatus('Desktop · updates no disponibles');
@@ -401,9 +399,13 @@ async function persistInstagram(raw, { statusEl, saveBtn, playLabel = false, pho
       }
       const current = identity.instagram ? saveInstagram(identity.instagram) : previous;
       if (statusEl) {
-        statusEl.textContent = identity.error === 'rename_limit'
-          ? `${identityErrorMessage('rename_limit')} (te quedan ${identity.renames_left ?? 0})`
-          : identityErrorMessage(identity.error);
+        setStatusText(
+          statusEl,
+          identity.error === 'rename_limit'
+            ? `${identityErrorMessage('rename_limit')} (te quedan ${identity.renames_left ?? 0})`
+            : identityErrorMessage(identity.error),
+          identity.error,
+        );
       }
       if (current) {
         setInstagramDeclined(false);
@@ -584,7 +586,7 @@ async function renderShellRanking(requestId) {
   const isCurrent = () => requestId === rankingRequest;
   if (rankingTab === 'all') {
     await loadAllTimeRankingInto(rankingBoard, rankingStatus, game.id, {
-      modalTitle: 'Más victorias',
+      modalTitle: `${game.name} · histórico`,
       isCurrent,
     });
   } else {
@@ -746,11 +748,6 @@ function paintChangelogTriggers(hasUpdate = hasPendingUpdates()) {
     changelogBtn.dataset.hasUpdate = flag;
     changelogBtn.textContent = label;
   }
-  if (changelogFootBtn) {
-    changelogFootBtn.dataset.hasUpdate = flag;
-    changelogFootBtn.textContent = label;
-  }
-  if (changelogFoot) changelogFoot.hidden = false;
 }
 
 function notesForDisplay(raw) {
@@ -1179,9 +1176,6 @@ if (helpModal) {
 
 if (changelogBtn) {
   changelogBtn.addEventListener('click', () => openChangelogModal());
-}
-if (changelogFootBtn) {
-  changelogFootBtn.addEventListener('click', () => openChangelogModal());
 }
 if (changelogModalClose) {
   changelogModalClose.addEventListener('click', () => closeChangelogModal());

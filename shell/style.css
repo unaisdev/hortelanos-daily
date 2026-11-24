@@ -1392,34 +1392,6 @@ body {
   font-style: italic;
 }
 
-.changelog-foot {
-  margin: 0;
-}
-
-.changelog-foot-btn {
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--amber);
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.changelog-foot-btn[data-has-update='1'] {
-  color: #fff8e7;
-  text-shadow: 0 0 10px rgba(255, 212, 92, 0.45);
-}
-
-.changelog-foot-btn:hover,
-.changelog-foot-btn:focus-visible {
-  color: #fff8e7;
-  outline: none;
-}
-
 .site-foot {
   margin: 0;
   width: 100%;
@@ -1688,6 +1660,14 @@ body {
   color: var(--amber);
 }
 
+.player-rom {
+  margin: -4px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(200, 255, 224, 0.6);
+}
+
 .player-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1867,4 +1847,20 @@ body {
 .player-ig-card-avatar {
   flex: none;
   display: flex;
+}
+
+/* Contact link shown next to a blocked-@ message */
+.support-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 700;
+  color: var(--amber);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.support-link:hover,
+.support-link:focus-visible {
+  color: #fff8e7;
+  outline: none;
 }

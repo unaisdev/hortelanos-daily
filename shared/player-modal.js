@@ -19,14 +19,18 @@ function instagramProfileUrl(handle) {
   return `https://www.instagram.com/${encodeURIComponent(handle)}/`;
 }
 
-export async function openInstagramProfile(handle) {
-  const url = instagramProfileUrl(handle);
+/** Opens a URL in the system browser (Tauri) or a new tab (web). */
+export async function openExternalLink(url) {
   try {
     if (isDesktop()) await openExternalUrl(url);
     else window.open(url, '_blank', 'noopener');
   } catch {
     window.open(url, '_blank', 'noopener');
   }
+}
+
+export function openInstagramProfile(handle) {
+  return openExternalLink(instagramProfileUrl(handle));
 }
 
 /** Day `YYYY-MM-DD` → "24 nov 2026" (UTC, so the day never shifts with the timezone). */
@@ -196,6 +200,12 @@ export async function openPlayerModal(handle, { gameId = '' } = {}) {
   rank.className = 'player-rank';
   rank.textContent = `🏆 #${p.rank} en el ranking`;
   hero.append(createAvatar(clean, { photo: true, size: 'lg' }), rank);
+  if (gameId) {
+    const rom = document.createElement('p');
+    rom.className = 'player-rom';
+    rom.textContent = gameLabel(gameId);
+    hero.appendChild(rom);
+  }
 
   const stats = document.createElement('div');
   stats.className = 'player-stats';
