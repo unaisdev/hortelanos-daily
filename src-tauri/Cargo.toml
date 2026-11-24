@@ -1,6 +1,6 @@
 [package]
 name = "hortelanos-daily"
-version = "2.4.0"
+version = "2.4.3"
 description = "Hortelano's Daily launcher"
 authors = ["unaisdev"]
 edition = "2021"
