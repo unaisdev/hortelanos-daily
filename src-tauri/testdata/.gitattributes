@@ -1,0 +1,2 @@
+# Signed fixtures: git must not rewrite line endings (CRLF on Windows would break the signature check).
+* -text
