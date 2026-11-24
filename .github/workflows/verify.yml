@@ -5,21 +5,35 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   protocol:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify dailygold protocol + ROM magic
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run test:protocols
+      - run: npm run test:ranking-seed
+      - run: npm run test:steven
+      - name: Verify protocol packs and ROM signatures
         run: |
           chmod +x scripts/verify-protocol.sh
           scripts/verify-protocol.sh games/dailygold
           scripts/verify-protocol.sh games/dailyred
+          scripts/verify-protocol.sh games/dailysteven
 
   tauri-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Install Linux WebKit deps
         run: |
           sudo apt-get update

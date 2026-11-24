@@ -9,6 +9,9 @@ Trainer front pics under shell/assets/trainers/:
 - gold.png — Ethan battle front from amoi-builds/halloflegends patch
   (`graphics/trainers/front_pics/hol_ethan.png`, sprite credit FourLeafSunny
   as listed in Hall of Legends README / The Spriters Resource)
+- steven.png — Steven front pic from pret/pokeemerald
+  (`graphics/trainers/front_pics/steven.png`, via the pokeemerald-expansion build of Daily Steven),
+  scaled 2x.
 
 Pokémon © Nintendo / Creatures / GAME FREAK.
 

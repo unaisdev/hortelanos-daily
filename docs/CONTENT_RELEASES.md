@@ -19,7 +19,7 @@ scripts/package-content.sh games/dailygold
 # → dist/content/dailygold-content-v0.1.0.zip + SHA256SUMS-dailygold.txt
 ```
 
-Sube el zip al Release del repo dueño (`unaisdev/dailygold` / `amoi-builds/dailyred`), no al launcher, salvo fallback centralizado.
+Sube el zip al Release del repo dueño (`unaisdev/dailygold` / `unaisdev/dailyred`), no al launcher, salvo fallback centralizado.
 
 ## Orden si cambia el protocolo ROM
 

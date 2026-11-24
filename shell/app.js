@@ -554,6 +554,7 @@ function initPlayerIg() {
 async function ensureIgBeforeLaunch(gameId) {
   if (!(await rankingEnabled(gameId))) return { joined: false, skipped: true };
   if (loadInstagram()) return { joined: true, skipped: false };
+  if (gameId === 'dailysteven' && loadInstagramDeclined()) return { joined: false, skipped: true };
   return openIgOnboard({ mode: 'launch' });
 }
 
@@ -570,31 +571,39 @@ function syncRankingTabs() {
   if (rankingTitle) rankingTitle.textContent = rankingTab === 'all' ? 'Más victorias' : 'Han ganado hoy';
 }
 
-async function renderShellRanking() {
+async function renderShellRanking(requestId) {
   const game = games[selected];
   if (!rankingPanel || !rankingBoard) return;
-  if (!game || !(await rankingEnabled(game.id))) {
-    rankingPanel.hidden = true;
-    return;
-  }
+  // Switching ROM: drop the previous ROM's board right away; the loader re-shows it if enabled.
+  if (rankingPanel.dataset.gameId !== game?.id) rankingPanel.hidden = true;
+  if (!game) return;
+  rankingPanel.dataset.gameId = game.id;
   setGameNames(Object.fromEntries(games.map((g) => [g.id, g.name])));
   syncRankingTabs();
+  const isCurrent = () => requestId === rankingRequest;
   if (rankingTab === 'all') {
-    await loadAllTimeRankingInto(rankingBoard, rankingStatus, game.id, { modalTitle: 'Más victorias' });
+    await loadAllTimeRankingInto(rankingBoard, rankingStatus, game.id, {
+      modalTitle: 'Más victorias',
+      isCurrent,
+    });
   } else {
     await loadRankingInto(rankingBoard, rankingStatus, game.id, localToday(), {
       modalTitle: `${game.name} · hoy`,
+      isCurrent,
     });
   }
 }
 
 let rankingChain = Promise.resolve();
 
-/** Reloads run one after another; a refresh superseded before it starts is skipped. */
+/**
+ * Reloads run one after another; a refresh superseded before it starts is skipped, and one
+ * superseded while loading (`isCurrent`) doesn't paint over the newer board.
+ */
 function refreshShellRanking() {
   const id = ++rankingRequest;
   rankingChain = rankingChain
-    .then(() => (id === rankingRequest ? renderShellRanking() : undefined))
+    .then(() => (id === rankingRequest ? renderShellRanking(id) : undefined))
     .catch(() => {});
   return rankingChain;
 }
@@ -606,6 +615,10 @@ rankingTabs.forEach((tab) => {
     rankingTab = next;
     void refreshShellRanking();
   });
+});
+
+window.addEventListener('focus', () => {
+  if (games[selected]?.id === 'dailysteven') void refreshShellRanking();
 });
 
 function renderDisplay() {

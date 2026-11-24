@@ -1,7 +1,7 @@
 import { Nostalgist } from './vendor/nostalgist.js';
 import { loadGameFiles } from './game-files.js';
 import { getProtocolAdapter } from './protocols/index.js';
-import { checkGameCompat } from './compat.js';
+import { checkGameCompat, getLauncherVersion } from './compat.js';
 import {
   configureDaily, today, addDays, dailySeed, msUntilTomorrow, loadStats, hydrateStatsFromDisk,
   resultFor, currentStreaks, markBattleStarted, recordResult, settleAbandonedGame,
@@ -9,6 +9,8 @@ import {
 import { createStatsDiskMirror } from '../shell/desktop.js';
 import { previewTeamForSeed } from './team-preview.js';
 import { configureArchiveParty, loadArchiveParty, peekArchiveParty } from './archive-party.js';
+import { STEVEN_ARCHIVE_FORMAT } from './steven-archive.js';
+import { loadInstagram, loadInstagramDeclined } from '../shared/player-profile.js';
 import {
   promptInstagramIfNeeded,
   rankingEnabled,
@@ -63,7 +65,7 @@ let packBase = null;
 let protocol = null;
 let practiceSeed = null;
 let archiveSeed = null;
-let archiveIconBase = null;
+const archiveIconBase = new URL('./archive/dailygold/', import.meta.url);
 let stats = null;
 let emu = null;
 let readGame = null;
@@ -165,12 +167,15 @@ let winSubmitPending = null;
 /** Publish win to shared ranking (UI lives in the launcher only). */
 async function publishWinIfNeeded(date, won) {
   if (!won || practiceSeed || !gameId) return;
+  if (gameId === 'dailysteven') {
+    if (date !== today() || (loadInstagramDeclined() && !loadInstagram())) return;
+  }
   if (!(await rankingEnabled(gameId))) return;
   if (winSubmitPending === date) return;
   winSubmitPending = date;
   try {
     const handle = await promptInstagramIfNeeded();
-    if (!handle) return;
+    if (!handle || (gameId === 'dailysteven' && date !== today())) return;
     await submitWin({
       gameId,
       playDate: date,
@@ -286,7 +291,17 @@ async function startRun() {
 function watchGame() {
   let status;
   try { status = readGame?.(); } catch { return; }
-  if (!status || practiceSeed) return;
+  if (!status) return;
+  if (practiceSeed) {
+    if (gameId === 'dailysteven' && status.phase === PHASE.FINISHED) {
+      practiceSeed = null;
+      const url = new URL(location.href);
+      url.searchParams.delete('seed');
+      history.replaceState(null, '', url);
+      endDailyGame(1000);
+    }
+    return;
+  }
   if (status.phase >= PHASE.BATTLE) {
     battleSeen = true;
     markBattleStarted(stats, runDate);
@@ -333,7 +348,7 @@ onClick(ui.play, startRun);
 onClick(ui.retry, startRun);
 
 function archiveEnabled() {
-  return Boolean(ui.archive && !ui.archive.hidden && archiveIconBase);
+  return Boolean(ui.archive && !ui.archive.hidden);
 }
 
 function latestArchiveDate() {
@@ -396,10 +411,21 @@ function archiveTip(mon) {
   return tip;
 }
 
+function archiveSpriteFallback() {
+  const placeholder = document.createElement('span');
+  placeholder.className = 'archive-mon-sprite archive-mon-sprite-placeholder';
+  placeholder.setAttribute('role', 'img');
+  placeholder.setAttribute('aria-label', 'Icono no disponible');
+  placeholder.title = 'Icono no disponible';
+  placeholder.textContent = '—';
+  return placeholder;
+}
+
 function renderArchiveTeam(party) {
-  const legendaryIds = new Set(
-    previewTeamForSeed(archiveSeed).filter((m) => m.legendary).map((m) => m.id),
-  );
+  const isSteven = gameId === 'dailysteven';
+  const legendaryIds = new Set(isSteven
+    ? []
+    : previewTeamForSeed(archiveSeed).filter((m) => m.legendary).map((m) => m.id));
   ui.archiveTeam.hidden = false;
   ui.archiveTeam.replaceChildren(...party.map((mon) => {
     const li = document.createElement('li');
@@ -408,20 +434,27 @@ function renderArchiveTeam(party) {
     if (legendaryIds.has(mon.species)) li.classList.add('is-legendary');
     if (mon.shiny) li.classList.add('is-shiny');
 
-    const img = document.createElement('img');
-    img.className = 'archive-mon-sprite';
-    img.src = new URL(`icons/${mon.species}.png`, archiveIconBase).href;
-    img.width = 64;
-    img.height = 64;
-    img.alt = mon.name;
-    img.loading = 'lazy';
-    img.decoding = 'async';
+    const iconId = isSteven ? mon.archiveIconId ?? null : mon.species;
+    if (iconId === null) {
+      li.appendChild(archiveSpriteFallback());
+    } else {
+      const img = document.createElement('img');
+      img.className = 'archive-mon-sprite';
+      img.width = 64;
+      img.height = 64;
+      img.alt = mon.name;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      if (isSteven) img.addEventListener('error', () => img.replaceWith(archiveSpriteFallback()), { once: true });
+      img.src = new URL(`icons/${iconId}.png`, archiveIconBase).href;
+      li.appendChild(img);
+    }
 
     const name = document.createElement('span');
     name.className = 'archive-mon-name';
     name.textContent = mon.name;
 
-    li.append(img, name, archiveTip(mon));
+    li.append(name, archiveTip(mon));
     if (legendaryIds.has(mon.species)) {
       const tag = document.createElement('span');
       tag.className = 'archive-mon-tag';
@@ -472,6 +505,10 @@ async function showArchivePreview() {
   } catch (err) {
     if (requestId !== archiveRequest) return;
     console.error(err);
+    if (gameId === 'dailysteven') {
+      ui.archiveStatus.textContent = `No se pudo recuperar el equipo. ${err?.message || err}`;
+      return;
+    }
     const speciesOnly = previewTeamForSeed(archiveSeed).map((m) => ({
       species: m.id,
       name: m.name,
@@ -504,15 +541,32 @@ function fightArchiveTeam() {
   startRun();
 }
 
+// RAM addresses of the party (gPlayerParty…) depend on the exact ROM build, so
+// they must travel with the ROM: packs declare their own in manifest.archive.symbols.
+// runner/archive/<game>/symbols.json is only a fallback for packs that predate it
+// (it matches the ROM bundled with the launcher).
+async function findArchiveSymbols() {
+  const candidates = [];
+  if (manifest?.archive?.symbols) candidates.push(new URL(manifest.archive.symbols, packBase));
+  if (gameId !== 'dailysteven') candidates.push(new URL(`./archive/${gameId}/symbols.json`, import.meta.url));
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return url;
+    } catch { /* try the next one */ }
+  }
+  return null;
+}
+
 async function initArchive() {
   if (!ui.archive) return;
-  const archiveBase = new URL(`./archive/${gameId}/`, import.meta.url);
-  const symbolsUrl = new URL('symbols.json', archiveBase);
+  const isSteven = gameId === 'dailysteven';
+  if (isSteven && manifest?.archive?.format !== STEVEN_ARCHIVE_FORMAT) return;
   try {
-    const res = await fetch(symbolsUrl);
-    if (!res.ok) throw new Error('sin archive');
-    archiveIconBase = archiveBase;
+    const symbolsUrl = await findArchiveSymbols();
+    if (!symbolsUrl) throw new Error('sin archive');
     configureArchiveParty({
+      format: manifest.archive?.format,
       symbolsUrl: symbolsUrl.href,
       loadFiles: () => loadGameFiles(packBase, manifest.rom.path),
       injectConfig: (rom, opts) => protocol.injectConfig(rom, opts),
@@ -652,7 +706,7 @@ async function boot() {
   if (!res.ok) throw new Error(`No se encontró el pack «${gameId}».`);
   manifest = await res.json();
 
-  const compat = checkGameCompat(manifest);
+  const compat = checkGameCompat(manifest, await getLauncherVersion());
   if (!compat.ok) {
     ui.gameTitle.textContent = manifest.name || gameId;
     ui.errorText.textContent = compat.message;
