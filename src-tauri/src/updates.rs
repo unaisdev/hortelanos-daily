@@ -54,7 +54,7 @@ struct GhAsset {
     browser_download_url: String,
 }
 
-fn client() -> AppResult<reqwest::Client> {
+pub(crate) fn client() -> AppResult<reqwest::Client> {
     Ok(reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .build()?)
@@ -71,7 +71,7 @@ fn strip_tag(tag: &str, prefix: &str) -> String {
     }
 }
 
-fn is_newer(remote: &str, local: &str) -> AppResult<bool> {
+pub(crate) fn is_newer(remote: &str, local: &str) -> AppResult<bool> {
     let remote = semver::Version::parse(remote.trim_start_matches('v'))?;
     let local = semver::Version::parse(local.trim_start_matches('v'))?;
     Ok(remote > local)
@@ -113,6 +113,10 @@ pub async fn check_launcher_update(app: &AppHandle) -> AppResult<LauncherUpdateI
 /// On success the app restarts and this call never returns.
 pub async fn install_launcher_update(app: &AppHandle) -> AppResult<Option<String>> {
     use tauri_plugin_updater::UpdaterExt;
+    // Unzipped portable folder: the installer-based plugin can't update it.
+    if crate::portable::is_portable() {
+        return crate::portable::install_update(app).await;
+    }
     let updater = app
         .updater()
         .map_err(|e| AppError::msg(format!("updater: {e}")))?;
@@ -312,7 +316,7 @@ pub async fn install_content_pack(
     })
 }
 
-async fn download_file(url: &str, dest: &Path) -> AppResult<()> {
+pub(crate) async fn download_file(url: &str, dest: &Path) -> AppResult<()> {
     let response = client()?.get(url).send().await?;
     if !response.status().is_success() {
         return Err(AppError::msg(format!(
