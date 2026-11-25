@@ -777,9 +777,26 @@ function paintChangelogTriggers(hasUpdate = hasPendingUpdates()) {
   }
 }
 
+const CREDIT_LINE = /^\s*cr[eé]ditos?\s*:\s*(\S.*)$/i;
+
+/** "Créditos: …" lines of release notes. They show once, small, at the bottom of the modal. */
+function creditLines(raw) {
+  if (!raw) return [];
+  return String(raw)
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => line.match(CREDIT_LINE)?.[1].trim())
+    .filter(Boolean);
+}
+
 function notesForDisplay(raw) {
   if (!raw || !String(raw).trim()) return '';
-  let text = String(raw).replace(/\r\n/g, '\n').trim();
+  let text = String(raw)
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .filter((line) => !CREDIT_LINE.test(line))
+    .join('\n')
+    .trim();
   const match = text.match(/##\s*Novedades\s*\n([\s\S]*?)(?=\n##\s|$)/i);
   if (match) {
     text = match[1].trim();
@@ -911,6 +928,15 @@ function paintChangelogModal() {
       notes: c.notes,
       updateAvailable: Boolean(c.updateAvailable),
     });
+  }
+
+  // Credits repeat in every game's notes: show each distinct line once, small, at the end.
+  const credits = [...new Set([launcherUpdate?.notes, ...contentUpdates.map((c) => c.notes)].flatMap(creditLines))];
+  if (credits.length) {
+    const p = document.createElement('p');
+    p.className = 'changelog-credits';
+    p.textContent = `Créditos: ${credits.join(' · ')}`;
+    changelogModalBody.appendChild(p);
   }
 }
 

@@ -1524,6 +1524,17 @@ body {
   text-shadow: 0 1px 0 #000;
 }
 
+/* Credits: once, at the very end, small and dim so they don't compete with the news. */
+.changelog-credits {
+  margin: 14px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed #1a4d32;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
 .changelog-empty,
 .changelog-missing {
   margin: 6px 0 0;
