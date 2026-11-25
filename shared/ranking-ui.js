@@ -5,6 +5,9 @@ import {
   fetchRanking,
   formatInstagram,
   identityErrorMessage,
+  identityErrorNeedsContact,
+  SUPPORT_DM_URL,
+  SUPPORT_HANDLE,
   loadInstagram,
   loadInstagramDeclined,
   normalizeInstagram,
@@ -14,9 +17,30 @@ import {
   setInstagramDeclined,
   submitWin,
 } from './ranking-client.js';
-import { createAvatar, openPlayerModal } from './player-modal.js';
+import { createAvatar, openExternalLink, openPlayerModal } from './player-modal.js';
 
 const PREVIEW_LIMIT = 5;
+
+/**
+ * Writes a status line. When `error` is one where the player should contact us (blocked @),
+ * a link opens a direct message to the support account on Instagram.
+ */
+export function setStatusText(el, text, error = '') {
+  if (!el) return;
+  el.replaceChildren(document.createTextNode(text));
+  if (!identityErrorNeedsContact(error)) return;
+  const link = document.createElement('a');
+  link.className = 'support-link';
+  link.href = SUPPORT_DM_URL;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = `Escribir a @${SUPPORT_HANDLE} ↗`;
+  link.addEventListener('click', (event) => {
+    event.preventDefault();
+    void openExternalLink(SUPPORT_DM_URL);
+  });
+  el.append(' ', link);
+}
 
 function formatWonAt(iso) {
   if (!iso) return '';
@@ -174,6 +198,7 @@ export function renderRankingList(container, entries, {
   highlight = '',
   modalTitle = 'Ranking de hoy',
   mode = 'today',
+  profileGameId = '',
 } = {}) {
   if (!container) return;
   container.replaceChildren();
@@ -186,7 +211,7 @@ export function renderRankingList(container, entries, {
   const preview = entries.slice(0, PREVIEW_LIMIT);
   const ol = document.createElement('ol');
   ol.className = 'ranking-list';
-  appendRankingItems(ol, preview, highlight, { mode });
+  appendRankingItems(ol, preview, highlight, { mode, profileGameId });
   container.appendChild(ol);
 
   if (entries.length > PREVIEW_LIMIT) {
@@ -195,7 +220,7 @@ export function renderRankingList(container, entries, {
     more.className = 'ranking-more';
     more.textContent = `Ver más (${entries.length - PREVIEW_LIMIT})`;
     more.addEventListener('click', () => {
-      openRankingModal(entries, { highlight, title: modalTitle, mode });
+      openRankingModal(entries, { highlight, title: modalTitle, mode, profileGameId });
     });
     container.appendChild(more);
   }
@@ -225,6 +250,7 @@ export async function loadRankingInto(boardEl, statusEl, gameId, playDate, optio
   renderRankingList(boardEl, result.ok ? result.entries : [], {
     highlight: loadInstagram(),
     modalTitle: options.modalTitle || 'Ranking de hoy',
+    profileGameId: gameId,
     emptyTitle: result.ok ? 'Nadie ha ganado todavía' : 'No se pudo cargar',
     emptyCopy: result.ok
       ? 'Sé el primero en aparecer aquí cuando ganes el combate de hoy.'
@@ -233,7 +259,7 @@ export async function loadRankingInto(boardEl, statusEl, gameId, playDate, optio
   return result;
 }
 
-/** All-time ranking (most wins, summed across ROMs) into the same panel. */
+/** All-time ranking of ONE ROM (most wins first) into the same panel. */
 export async function loadAllTimeRankingInto(boardEl, statusEl, gameId, options = {}) {
   const enabled = await rankingEnabled(gameId);
   if (options.isCurrent?.() === false) return;
@@ -244,7 +270,7 @@ export async function loadAllTimeRankingInto(boardEl, statusEl, gameId, options 
   }
   if (wrap) wrap.hidden = false;
   if (statusEl) statusEl.textContent = 'Cargando…';
-  const result = await fetchAllTimeRanking();
+  const result = await fetchAllTimeRanking(gameId); // per ROM: each game has its own board
   if (options.isCurrent?.() === false) return;
   if (result.disabled) {
     if (wrap) wrap.hidden = true;
@@ -259,6 +285,7 @@ export async function loadAllTimeRankingInto(boardEl, statusEl, gameId, options 
     highlight: loadInstagram(),
     modalTitle: options.modalTitle || 'Más victorias',
     mode: 'all',
+    profileGameId: gameId,
     emptyTitle: result.ok ? 'Aún no hay victorias' : 'No se pudo cargar',
     emptyCopy: result.ok
       ? 'Cuando alguien gane, aparecerá aquí con su historial.'
@@ -278,7 +305,13 @@ export async function promptInstagramIfNeeded() {
   const identity = await setIdentity({ instagram: handle });
   if (!identity.ok && ['rename_limit', 'handle_released', 'instagram_taken'].includes(identity.error)) {
     clearInstagram();
-    if (typeof window !== 'undefined') window.alert(identityErrorMessage(identity.error));
+    if (typeof window !== 'undefined') {
+      // alert() can't hold a link, so print the address for blocked @s.
+      const extra = identityErrorNeedsContact(identity.error)
+        ? `\n\nEscribe a @${SUPPORT_HANDLE}: ${SUPPORT_DM_URL}`
+        : '';
+      window.alert(identityErrorMessage(identity.error) + extra);
+    }
     return null;
   }
   return handle;
@@ -299,7 +332,7 @@ export async function submitWinAndRefresh({ gameId, playDate, seed, boardEl, sta
   if (!result.ok) {
     if (statusEl) {
       const map = {
-        instagram_taken: 'Ese @ ya lo usa otra persona.',
+        instagram_taken: identityErrorMessage('instagram_taken'),
         handle_released: identityErrorMessage('handle_released'),
         rename_limit: identityErrorMessage('rename_limit'),
         seed_mismatch: 'Seed no válida para hoy.',
@@ -308,7 +341,7 @@ export async function submitWinAndRefresh({ gameId, playDate, seed, boardEl, sta
         network: 'Sin red; se reintentará luego.',
         timeout: 'El ranking no respondió a tiempo.',
       };
-      statusEl.textContent = map[result.error] || 'No se pudo publicar el ranking.';
+      setStatusText(statusEl, map[result.error] || 'No se pudo publicar el ranking.', result.error);
     }
     return result;
   }

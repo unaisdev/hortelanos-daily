@@ -56,7 +56,9 @@ function createHarness() {
   const raw = (pathname) => worker.fetch(new Request('https://ranking.test' + pathname, {
     headers: { 'cf-connecting-ip': '198.51.100.7' },
   }), { DB });
-  return { call, raw, close: () => sqlite.close() };
+  // Seed rows the API can't create (wins on past days).
+  const exec = (sql) => sqlite.exec(sql);
+  return { call, raw, exec, close: () => sqlite.close() };
 }
 
 test('Steven and Gold have separate boards with the existing submission rules', async () => {
@@ -148,6 +150,54 @@ test('avatars: only the @ owner uploads, only real small images, and they follow
     assert.equal(Buffer.from(await served.arrayBuffer()).toString('base64'), jpeg);
     assert.equal((await raw('/avatar/photo.one')).status, 404); // burned @ has no photo
     assert.equal((await raw('/avatar/nobody.here')).status, 404);
+  } finally {
+    close();
+  }
+});
+
+test('all-time board and profile are scoped to one ROM, with independent streaks', async () => {
+  const { call, exec, close } = createHarness();
+  try {
+    const day = (offset) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - offset);
+      return d.toISOString().slice(0, 10);
+    };
+    const today = day(0);
+    const seeds = { dailygold: dailySeedFor('dailyoro:', today), dailysteven: dailySeedFor('dailysteven:', today) };
+    const win = (game, device, instagram) =>
+      call('/win', { game_id: game, play_date: today, seed: seeds[game], device_id: device, instagram });
+
+    // Ana wins Gold and Steven today; Beto wins only Steven.
+    assert.equal((await win('dailygold', 'device-ana-0001', 'ana'))[0], 201);
+    assert.equal((await win('dailysteven', 'device-ana-0001', 'ana'))[0], 201);
+    assert.equal((await win('dailysteven', 'device-beto-001', 'beto'))[0], 201);
+    // Ana's past: Gold yesterday + the day before (3-day Gold streak), Steven two days ago (a gap).
+    const past = (id, game, offset) =>
+      `('${id}','${game}','${day(offset)}','x','ana','device-ana-0001','${day(offset)}T10:00:00Z')`;
+    exec(`INSERT INTO daily_wins (id, game_id, play_date, seed, instagram, device_id, won_at) VALUES
+      ${past('g1', 'dailygold', 1)}, ${past('g2', 'dailygold', 2)}, ${past('s1', 'dailysteven', 3)}`);
+
+    const board = async (query) => (await call('/ranking/all' + query))[1].entries.map((e) => [e.instagram, e.wins]);
+    assert.deepEqual(await board('?game=dailygold'), [['ana', 3]], 'Gold board has only Gold wins');
+    assert.deepEqual((await board('?game=dailysteven')).sort(), [['ana', 2], ['beto', 1]], 'Steven board is separate');
+    assert.deepEqual(await board(''), [['ana', 5], ['beto', 1]], 'no game = all ROMs summed');
+    const [, goldBoard] = await call('/ranking/all?game=dailygold');
+    assert.equal(goldBoard.entries[0].current_streak, 3, 'Gold streak counts Gold days only');
+
+    const [, goldAna] = await call('/player/ana?game=dailygold');
+    assert.equal(goldAna.wins, 3);
+    assert.equal(goldAna.rank, 1);
+    assert.equal(goldAna.current_streak, 3);
+    assert.ok(goldAna.history.every((h) => h.game_id === 'dailygold'));
+
+    const [, stevenAna] = await call('/player/ana?game=dailysteven');
+    assert.equal(stevenAna.wins, 2);
+    assert.equal(stevenAna.current_streak, 1, "Steven's gap breaks the streak: today only");
+    assert.ok(stevenAna.history.every((h) => h.game_id === 'dailysteven'));
+
+    assert.equal((await call('/player/beto?game=dailygold'))[0], 404, 'Beto never won Gold');
+    assert.equal((await call('/ranking/all?game=dailyred'))[0], 400);
   } finally {
     close();
   }

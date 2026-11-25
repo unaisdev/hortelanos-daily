@@ -1,4 +1,12 @@
 import { getDeviceId, loadInstagram, normalizeInstagram } from './player-profile.js';
+import {
+  avatarVersion,
+  bumpAvatarVersion,
+  cacheKey,
+  cachePut,
+  cached,
+  invalidateRanking,
+} from './ranking-cache.js';
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const STEVEN_HEALTH_TIMEOUT_MS = 1200;
@@ -117,22 +125,27 @@ async function request(path, options = {}) {
 
 export async function fetchRanking(gameId, playDate) {
   if (!(await rankingEnabled(gameId))) return { ok: false, disabled: true, entries: [] };
-  const q = new URLSearchParams({ game: gameId, date: playDate });
-  const result = await request(`/ranking?${q}`);
-  if (!result.ok) return { ...result, entries: [] };
-  const entries = Array.isArray(result.data?.entries) ? result.data.entries : [];
-  return { ok: true, entries, data: result.data };
+  // Cached for the whole session; only invalidated by the player's own win in this ROM.
+  return cached(cacheKey('today', gameId, playDate), async () => {
+    const q = new URLSearchParams({ game: gameId, date: playDate });
+    const result = await request(`/ranking?${q}`);
+    if (!result.ok) return { ...result, entries: [] };
+    const entries = Array.isArray(result.data?.entries) ? result.data.entries : [];
+    return { ok: true, entries, data: result.data };
+  });
 }
 
 /** All-time ranking by number of wins (all ROMs unless `gameId` is given). */
 export async function fetchAllTimeRanking(gameId = '') {
   const config = await loadConfig();
   if (!apiBase(config)) return { ok: false, disabled: true, entries: [] };
-  const q = new URLSearchParams(gameId ? { game: gameId } : {});
-  const result = await request(`/ranking/all?${q}`);
-  if (!result.ok) return { ...result, entries: [] };
-  const entries = Array.isArray(result.data?.entries) ? result.data.entries : [];
-  return { ok: true, entries, data: result.data };
+  return cached(cacheKey('all', gameId), async () => {
+    const q = new URLSearchParams(gameId ? { game: gameId } : {});
+    const result = await request(`/ranking/all?${q}`);
+    if (!result.ok) return { ...result, entries: [] };
+    const entries = Array.isArray(result.data?.entries) ? result.data.entries : [];
+    return { ok: true, entries, data: result.data };
+  });
 }
 
 /** Player card: wins, rank, streaks and history (newest first). */
@@ -141,10 +154,12 @@ export async function fetchPlayer(handle, gameId = '') {
   if (!apiBase(config)) return { ok: false, disabled: true, error: 'ranking_disabled' };
   const clean = normalizeInstagram(handle);
   if (!clean) return { ok: false, error: 'invalid_instagram' };
-  const q = new URLSearchParams(gameId ? { game: gameId } : {});
-  const result = await request(`/player/${encodeURIComponent(clean)}?${q}`);
-  if (!result.ok) return result;
-  return { ok: true, player: result.data };
+  return cached(cacheKey('player', gameId, clean), async () => {
+    const q = new URLSearchParams(gameId ? { game: gameId } : {});
+    const result = await request(`/player/${encodeURIComponent(clean)}?${q}`);
+    if (!result.ok) return result;
+    return { ok: true, player: result.data };
+  });
 }
 
 /** Photo URL for a handle (served by the Worker). `bust` forces a reload after changing it. */
@@ -153,7 +168,9 @@ export async function avatarUrl(handle, bust = '') {
   const base = apiBase(config);
   const clean = normalizeInstagram(handle);
   if (!base || !clean) return '';
-  return `${base}/avatar/${encodeURIComponent(clean)}${bust ? `?v=${encodeURIComponent(bust)}` : ''}`;
+  // After the player changes their own photo, every view of that handle gets a fresh URL.
+  const version = bust || avatarVersion(clean);
+  return `${base}/avatar/${encodeURIComponent(clean)}${version ? `?v=${encodeURIComponent(version)}` : ''}`;
 }
 
 /** Uploads this device's profile photo (a small image data URL). Needs a registered @ first. */
@@ -164,13 +181,16 @@ export async function uploadAvatar(dataUrl) {
     method: 'POST',
     body: JSON.stringify({ device_id: getDeviceId(), image: dataUrl }),
   });
-  return result.ok ? { ok: true } : result;
+  if (!result.ok) return result;
+  const mine = loadInstagram();
+  if (mine) bumpAvatarVersion(mine);
+  return { ok: true };
 }
 
 const IDENTITY_ERRORS = {
   rename_limit: 'Solo puedes cambiar de @ 2 veces al día. Prueba mañana.',
-  handle_released: 'Ese @ ya no está disponible: alguien lo abandonó y quedó bloqueado.',
-  instagram_taken: 'Ese @ ya lo usa otra persona.',
+  handle_released: 'Ese @ está bloqueado y no se puede usar. Si crees que es un error, avísanos por Instagram para que quede constancia.',
+  instagram_taken: 'Ese @ ya lo usa otra persona. Si es tuyo de verdad, avísanos por Instagram para que quede constancia.',
   invalid_instagram: 'Handle inválido (letras, números, . y _).',
   rate_limited: 'Demasiados intentos; espera un minuto.',
   invalid_image: 'Esa imagen no es válida. Prueba con un JPG o PNG.',
@@ -179,6 +199,18 @@ const IDENTITY_ERRORS = {
   network: 'Sin conexión con el servidor.',
   timeout: 'El servidor no respondió a tiempo.',
 };
+
+/** Who to write to when a player's @ is blocked. `ig.me/m/<user>` opens a direct message. */
+export const SUPPORT_HANDLE = 'elhortelanoo';
+export const SUPPORT_DM_URL = `https://ig.me/m/${SUPPORT_HANDLE}`;
+
+/**
+ * Errors where the player should get in touch: a blocked @, or an @ someone else already uses
+ * (it may be the real owner being impersonated). Both need a human to look at them.
+ */
+export function identityErrorNeedsContact(error) {
+  return error === 'handle_released' || error === 'instagram_taken';
+}
 
 /** Spanish message for a failed `setIdentity` / `submitWin` error code. */
 export function identityErrorMessage(error) {
@@ -212,6 +244,8 @@ export async function setIdentity({ instagram } = {}) {
       renames_left: result.data?.renames_left ?? null,
     };
   }
+  // A real rename moves every past win to the new @: every cached list/profile is now stale.
+  if (result.data?.changed && !result.data?.created) invalidateRanking();
   return {
     ok: true,
     instagram: result.data?.instagram || handle,
@@ -246,10 +280,19 @@ export async function submitWin({ gameId, playDate, seed, instagram }) {
   });
 
   if (!result.ok) return result;
+  const entries = Array.isArray(result.data?.entries) ? result.data.entries : [];
+  // My own win changes this ROM's boards and my profile: drop them, then seed today's board with
+  // the fresh list the server just returned so the next view needs no request at all.
+  invalidateRanking(gameId);
+  cachePut(cacheKey('today', gameId, playDate), {
+    ok: true,
+    entries,
+    data: { game_id: gameId, play_date: playDate, entries, count: entries.length },
+  });
   return {
     ok: true,
     data: result.data,
-    entries: Array.isArray(result.data?.entries) ? result.data.entries : [],
+    entries,
     rank: result.data?.rank ?? null,
   };
 }
