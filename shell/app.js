@@ -111,6 +111,23 @@ let desktopInfo = null;
 let skipRequested = false;
 let updateBusy = false;
 
+/** Changelog accordion: whatever was updated when this session opened starts expanded. */
+const LAST_LAUNCHER_VERSION_KEY = 'hortelano:last-launcher-version';
+const updatedThisSession = new Set(); // 'launcher' or a game id
+const changelogToggled = new Map(); // block id -> open; the player's own choice wins
+let launcherVersionNoted = false;
+
+/** The launcher counts as "just updated" if its version differs from the one seen last time. */
+function noteLauncherVersion(version) {
+  if (launcherVersionNoted || !version) return;
+  launcherVersionNoted = true;
+  try {
+    const previous = localStorage.getItem(LAST_LAUNCHER_VERSION_KEY);
+    if (previous && previous !== version) updatedThisSession.add('launcher');
+    localStorage.setItem(LAST_LAUNCHER_VERSION_KEY, version);
+  } catch { /* Storage is optional. */ }
+}
+
 const SKIP_BOOT_KEY = 'hortelano:skip-boot';
 const SELECTED_GAME_KEY = 'hortelano:selected-game';
 
@@ -210,6 +227,7 @@ async function enrichFromDesktop(catalog) {
   if (!isDesktop()) return catalog;
   try {
     desktopInfo = await getDesktopInfo();
+    noteLauncherVersion(desktopInfo?.launcherVersion);
   } catch (err) {
     console.warn('get_desktop_info', err);
   }
@@ -559,7 +577,8 @@ function initPlayerIg() {
 async function ensureIgBeforeLaunch(gameId) {
   if (!(await rankingEnabled(gameId))) return { joined: false, skipped: true };
   if (loadInstagram()) return { joined: true, skipped: false };
-  if (gameId === 'dailysteven' && loadInstagramDeclined()) return { joined: false, skipped: true };
+  // Newer ROMs (everything but Gold) never nag someone who already declined the ranking.
+  if (gameId !== 'dailygold' && loadInstagramDeclined()) return { joined: false, skipped: true };
   return openIgOnboard({ mode: 'launch' });
 }
 
@@ -623,7 +642,8 @@ rankingTabs.forEach((tab) => {
 });
 
 window.addEventListener('focus', () => {
-  if (games[selected]?.id === 'dailysteven') void refreshShellRanking();
+  // Non-Gold boards can appear while the app is open (the Worker starts announcing the ROM).
+  if (games[selected]?.id !== 'dailygold') void refreshShellRanking();
 });
 
 function renderDisplay() {
@@ -787,39 +807,61 @@ function notesForDisplay(raw) {
   return text;
 }
 
-function appendChangelogSection(container, { title, meta, notes, updateAvailable }) {
-  const section = document.createElement('section');
+function formatReleaseDate(iso) {
+  const date = iso ? new Date(iso) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+}
+
+/** One accordion block: title, version and release date in the header, notes inside. */
+function appendChangelogSection(container, { id, title, version, publishedAt, notes, updateAvailable }) {
+  const section = document.createElement('details');
   section.className = 'changelog-section';
   section.dataset.update = updateAvailable ? '1' : '0';
+  const defaultOpen = updatedThisSession.has(id) || Boolean(updateAvailable);
+  section.open = changelogToggled.has(id) ? changelogToggled.get(id) : defaultOpen;
 
-  const head = document.createElement('div');
+  const head = document.createElement('summary');
   head.className = 'changelog-section-head';
+  head.addEventListener('click', () => {
+    // The browser flips `open` after this handler; remember what the player chose.
+    setTimeout(() => changelogToggled.set(id, section.open), 0);
+  });
 
   const h = document.createElement('h3');
   h.className = 'changelog-section-title';
   h.textContent = title;
   head.appendChild(h);
 
-  if (meta) {
-    const m = document.createElement('p');
-    m.className = 'changelog-section-meta';
-    m.textContent = meta;
-    head.appendChild(m);
+  const meta = document.createElement('p');
+  meta.className = 'changelog-section-meta';
+  if (version) {
+    const v = document.createElement('span');
+    v.className = 'changelog-version';
+    v.textContent = version;
+    meta.appendChild(v);
   }
+  const when = formatReleaseDate(publishedAt);
+  if (when) {
+    const d = document.createElement('time');
+    d.className = 'changelog-date';
+    d.dateTime = publishedAt;
+    d.textContent = when;
+    meta.appendChild(d);
+  }
+  if (meta.childElementCount) head.appendChild(meta);
   section.appendChild(head);
 
   const body = notesForDisplay(notes);
+  const text = document.createElement('p');
   if (body) {
-    const p = document.createElement('p');
-    p.className = 'changelog-notes';
-    p.textContent = body;
-    section.appendChild(p);
+    text.className = 'changelog-notes';
+    text.textContent = body;
   } else {
-    const empty = document.createElement('p');
-    empty.className = 'changelog-missing';
-    empty.textContent = 'Sin notas en este release.';
-    section.appendChild(empty);
+    text.className = 'changelog-missing';
+    text.textContent = 'Sin notas en este release.';
   }
+  section.appendChild(text);
 
   container.appendChild(section);
 }
@@ -839,12 +881,14 @@ function paintChangelogModal() {
   if (launcherUpdate) {
     const cur = launcherUpdate.currentVersion || '?';
     const latest = launcherUpdate.latestVersion || cur;
-    const meta = launcherUpdate.updateAvailable
+    const version = launcherUpdate.updateAvailable
       ? `v${cur} → v${latest}`
       : `v${latest}`;
     appendChangelogSection(changelogModalBody, {
+      id: 'launcher',
       title: 'Launcher',
-      meta,
+      version,
+      publishedAt: launcherUpdate.publishedAt,
       notes: launcherUpdate.notes,
       updateAvailable: Boolean(launcherUpdate.updateAvailable),
     });
@@ -853,10 +897,12 @@ function paintChangelogModal() {
   for (const c of contentUpdates) {
     const local = c.localVersion || '?';
     const remote = c.remoteVersion || local;
-    const meta = c.updateAvailable ? `content ${local} → ${remote}` : `content ${remote}`;
+    const version = c.updateAvailable ? `v${local} → v${remote}` : `v${remote}`;
     appendChangelogSection(changelogModalBody, {
+      id: c.gameId,
       title: c.name || c.gameId || 'Pack',
-      meta,
+      version,
+      publishedAt: c.publishedAt,
       notes: c.notes,
       updateAvailable: Boolean(c.updateAvailable),
     });
@@ -937,6 +983,7 @@ async function installPendingPacks(pending) {
     for (const item of pending) {
       setUpdateStatus(`Descargando ${item.gameId} ${item.remoteVersion || ''}…`.trim());
       await installContentPack(item.gameId, item.downloadUrl, item.sha256 || null);
+      updatedThisSession.add(item.gameId);
     }
     const base = await loadCatalogFromFetch();
     const catalog = await enrichFromDesktop(base);

@@ -1,8 +1,9 @@
 {
   "apiUrl": "https://hortelanos-daily-ranking.hortelanos-daily.workers.dev",
-  "games": ["dailygold", "dailysteven"],
+  "games": ["dailygold", "dailysteven", "dailyred"],
   "seedPrefixes": {
     "dailygold": "dailyoro:",
-    "dailysteven": "dailysteven:"
+    "dailysteven": "dailysteven:",
+    "dailyred": "dailyred:"
   }
 }

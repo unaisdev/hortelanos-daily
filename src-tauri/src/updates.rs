@@ -22,6 +22,8 @@ pub struct LauncherUpdateInfo {
     pub update_available: bool,
     pub html_url: Option<String>,
     pub notes: Option<String>,
+    /// ISO-8601 publication date of the release (GitHub `published_at`).
+    pub published_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -37,6 +39,7 @@ pub struct ContentUpdateInfo {
     pub sha256: Option<String>,
     pub html_url: Option<String>,
     pub notes: Option<String>,
+    pub published_at: Option<String>,
     pub reason: String,
 }
 
@@ -45,6 +48,7 @@ struct GhRelease {
     tag_name: String,
     html_url: String,
     body: Option<String>,
+    published_at: Option<String>,
     assets: Vec<GhAsset>,
 }
 
@@ -88,6 +92,7 @@ pub async fn check_launcher_update(app: &AppHandle) -> AppResult<LauncherUpdateI
             update_available: false,
             html_url: Some(format!("https://github.com/{LAUNCHER_REPO}/releases")),
             notes: Some("Aún no hay releases del launcher.".into()),
+            published_at: None,
         });
     }
     if !response.status().is_success() {
@@ -105,6 +110,7 @@ pub async fn check_launcher_update(app: &AppHandle) -> AppResult<LauncherUpdateI
         update_available,
         html_url: Some(release.html_url),
         notes: release.body,
+        published_at: release.published_at,
     })
 }
 
@@ -158,6 +164,7 @@ async fn check_one_content(app: &AppHandle, game: &CatalogGame) -> AppResult<Con
             sha256: None,
             html_url: None,
             notes: None,
+            published_at: None,
             reason: "sin puntero de content en catálogo".into(),
         });
     };
@@ -177,6 +184,7 @@ async fn check_one_content(app: &AppHandle, game: &CatalogGame) -> AppResult<Con
             sha256: None,
             html_url: Some(format!("https://github.com/{}/releases", content.repo)),
             notes: None,
+            published_at: None,
             reason: "el repo fuente aún no tiene Releases".into(),
         });
     }
@@ -221,6 +229,7 @@ async fn check_one_content(app: &AppHandle, game: &CatalogGame) -> AppResult<Con
         sha256,
         html_url: Some(release.html_url),
         notes: release.body,
+        published_at: release.published_at,
         reason: if asset.is_none() {
             format!("Release sin asset {}", content.asset)
         } else {

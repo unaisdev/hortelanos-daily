@@ -1395,9 +1395,8 @@ body {
 }
 
 .changelog-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  /* <details>: keep it block (display:flex on it misbehaves in some WebKit builds). */
+  display: block;
   padding-bottom: 12px;
   border-bottom: 2px solid #1a4d32;
 }
@@ -1407,12 +1406,45 @@ body {
   padding-bottom: 0;
 }
 
+/* Accordion header: arrow · title · version + date. */
 .changelog-section-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 6px 12px;
+  gap: 4px 12px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.changelog-section-head::-webkit-details-marker {
+  display: none;
+}
+
+.changelog-section-head::before {
+  content: '▸';
+  flex: none;
+  width: 1em;
+  color: var(--amber);
+  transition: transform 0.12s ease;
+}
+
+.changelog-section[open] > .changelog-section-head::before {
+  transform: rotate(90deg);
+}
+
+.changelog-section-head:hover .changelog-section-title,
+.changelog-section-head:focus-visible .changelog-section-title {
+  color: #fff8e7;
+}
+
+.changelog-section-head:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+
+.changelog-section[open] > .changelog-section-head {
+  margin-bottom: 4px;
 }
 
 .changelog-section-title {
@@ -1425,9 +1457,22 @@ body {
 }
 
 .changelog-section-meta {
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin: 0 0 0 auto;
   font-size: 11px;
   color: var(--muted);
+}
+
+.changelog-version {
+  color: #c8ffe0;
+  font-weight: 700;
+}
+
+.changelog-date {
+  white-space: nowrap;
 }
 
 .changelog-section[data-update='1'] .changelog-section-title {
@@ -1435,7 +1480,7 @@ body {
 }
 
 .changelog-notes {
-  margin: 0;
+  margin: 6px 0 0;
   white-space: pre-wrap;
   font-size: 12px;
   line-height: 1.45;
@@ -1445,7 +1490,7 @@ body {
 
 .changelog-empty,
 .changelog-missing {
-  margin: 0;
+  margin: 6px 0 0;
   font-size: 12px;
   color: var(--muted);
   font-style: italic;

@@ -9,14 +9,16 @@ import {
 } from './ranking-cache.js';
 
 const DEFAULT_TIMEOUT_MS = 8000;
-const STEVEN_HEALTH_TIMEOUT_MS = 1200;
-const STEVEN_HEALTH_TTL_MS = 60_000;
+const HEALTH_TIMEOUT_MS = 1200;
+const HEALTH_TTL_MS = 60_000;
+/** Gold has always had a ranking. Every other ROM only shows one once the Worker announces it. */
+const ALWAYS_ENABLED_GAME = 'dailygold';
 const CONFIG_URL = new URL('./ranking-config.json', import.meta.url);
 
 let cachedConfig = null;
 let configPromise = null;
-let stevenHealth = null;
-let stevenHealthRequest = null;
+let health = null;
+let healthRequest = null;
 
 async function loadConfig() {
   if (cachedConfig) return cachedConfig;
@@ -38,33 +40,35 @@ function apiBase(config) {
   return String(config?.apiUrl || '').trim().replace(/\/$/, '');
 }
 
-function freshStevenHealth(entry) {
-  return typeof entry?.enabled === 'boolean' && entry.expiresAt > Date.now();
+function freshHealth(entry) {
+  return Array.isArray(entry?.games) && entry.expiresAt > Date.now();
 }
 
-async function stevenRankingEnabled(base) {
-  const key = `hortelano:steven-ranking-health:${base}`;
-  if (freshStevenHealth(stevenHealth)) return stevenHealth.enabled;
+/** Games the Worker says it serves (`/health`). Empty when unreachable, slow or not confirmed. */
+async function announcedGames(base) {
+  const key = `hortelano:ranking-health:${base}`;
+  if (freshHealth(health)) return health.games;
   try {
     const cached = JSON.parse(sessionStorage.getItem(key));
-    if (freshStevenHealth(cached)) {
-      stevenHealth = cached;
-      return cached.enabled;
+    if (freshHealth(cached)) {
+      health = cached;
+      return cached.games;
     }
   } catch { /* Storage is optional. */ }
 
-  stevenHealthRequest ??= request('/health', { timeoutMs: STEVEN_HEALTH_TIMEOUT_MS, cache: 'no-store' })
+  healthRequest ??= request('/health', { timeoutMs: HEALTH_TIMEOUT_MS, cache: 'no-store' })
     .then(({ ok, data }) => {
-      const enabled = ok && data?.ok === true
-        && Array.isArray(data.games) && data.games.includes('dailysteven');
-      stevenHealth = { enabled, expiresAt: Date.now() + STEVEN_HEALTH_TTL_MS };
+      const games = ok && data?.ok === true && Array.isArray(data.games)
+        ? data.games.filter((id) => typeof id === 'string')
+        : [];
+      health = { games, expiresAt: Date.now() + HEALTH_TTL_MS };
       try {
-        sessionStorage.setItem(key, JSON.stringify(stevenHealth));
+        sessionStorage.setItem(key, JSON.stringify(health));
       } catch { /* Storage is optional. */ }
-      return enabled;
+      return games;
     })
-    .finally(() => { stevenHealthRequest = null; });
-  return stevenHealthRequest;
+    .finally(() => { healthRequest = null; });
+  return healthRequest;
 }
 
 export async function rankingEnabled(gameId) {
@@ -74,7 +78,8 @@ export async function rankingEnabled(gameId) {
   const games = config?.games;
   const configured = Array.isArray(games) && games.length ? games.includes(gameId) : gameId === 'dailygold';
   if (!configured) return false;
-  return gameId === 'dailysteven' ? stevenRankingEnabled(base) : true;
+  if (gameId === ALWAYS_ENABLED_GAME) return true;
+  return (await announcedGames(base)).includes(gameId);
 }
 
 export async function seedPrefixFor(gameId) {

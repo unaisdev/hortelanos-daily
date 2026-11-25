@@ -5,7 +5,7 @@ import { configureDaily, dailySeed } from '../runner/daily.js';
 import { expectedSeed, dailySeedFor as workerSeed } from '../services/ranking-api/src/seed.js';
 
 const config = JSON.parse(readFileSync(new URL('../shared/ranking-config.json', import.meta.url)));
-for (const game of ['dailygold', 'dailysteven']) {
+for (const game of ['dailygold', 'dailysteven', 'dailyred']) {
   const prefix = config.seedPrefixes[game];
   configureDaily({ statsKey: 'ranking-test', seedPrefix: prefix });
   for (const date of ['2000-02-29', '2026-11-13', '2026-12-31', '2027-01-01']) {
