@@ -69,12 +69,12 @@ test('Steven and Gold have separate boards with the existing submission rules', 
     const gold = { ...win, game_id: 'dailygold', seed: dailySeedFor('dailyoro:', date) };
     const steven = { ...win, game_id: 'dailysteven', seed: dailySeedFor('dailysteven:', date) };
     const [, health] = await call('/health');
-    assert.deepEqual(health.games.sort(), ['dailygold', 'dailysteven']);
+    assert.deepEqual(health.games.sort(), ['dailygold', 'dailyred', 'dailysteven']);
     assert.equal((await call('/identity', { ...win, change_date: date }))[0], 201);
     assert.equal((await call('/win', gold))[0], 201);
     assert.deepEqual(await call('/win', { ...steven, seed: gold.seed }), [400, { error: 'seed_mismatch' }]);
     assert.deepEqual(await call('/win', { ...steven, play_date: '2001-01-01' }), [400, { error: 'invalid_date' }]);
-    assert.deepEqual(await call('/win', { ...steven, game_id: 'dailyred' }), [400, { error: 'invalid_game' }]);
+    assert.deepEqual(await call('/win', { ...steven, game_id: 'dailymax' }), [400, { error: 'invalid_game' }]);
     assert.equal((await call('/win', steven))[0], 201);
     const [duplicate, response] = await call('/win', steven);
     assert.equal(duplicate, 200);
@@ -85,6 +85,30 @@ test('Steven and Gold have separate boards with the existing submission rules', 
     const [, stevenBoard] = await call('/ranking?game=dailysteven&date=' + date);
     assert.deepEqual(goldBoard.entries.map(entry => entry.instagram), ['test.player']);
     assert.deepEqual(stevenBoard.entries.map(entry => entry.instagram).sort(), ['another.player', 'test.player']);
+  } finally {
+    close();
+  }
+});
+
+test('Red has its own board and seed, separate from Gold and Steven', async () => {
+  const { call, close } = createHarness();
+  try {
+    const date = new Date().toISOString().slice(0, 10);
+    const win = { play_date: date, instagram: 'red.player', device_id: 'red-device-0001' };
+    const red = { ...win, game_id: 'dailyred', seed: dailySeedFor('dailyred:', date) };
+    assert.equal((await call('/identity', { ...win, change_date: date }))[0], 201);
+    // Another ROM's seed is rejected for Red, and Red's seed is rejected for the others.
+    assert.deepEqual(await call('/win', { ...red, seed: dailySeedFor('dailyoro:', date) }), [400, { error: 'seed_mismatch' }]);
+    assert.deepEqual(await call('/win', { ...red, game_id: 'dailygold' }), [400, { error: 'seed_mismatch' }]);
+    assert.equal((await call('/win', red))[0], 201);
+    const [, redBoard] = await call('/ranking?game=dailyred&date=' + date);
+    const [, goldBoard] = await call('/ranking?game=dailygold&date=' + date);
+    const [, stevenBoard] = await call('/ranking?game=dailysteven&date=' + date);
+    assert.deepEqual(redBoard.entries.map(entry => entry.instagram), ['red.player']);
+    assert.equal(goldBoard.entries.length, 0);
+    assert.equal(stevenBoard.entries.length, 0);
+    const [, allTimeRed] = await call('/ranking/all?game=dailyred');
+    assert.deepEqual(allTimeRed.entries.map(entry => entry.instagram), ['red.player']);
   } finally {
     close();
   }
@@ -197,7 +221,7 @@ test('all-time board and profile are scoped to one ROM, with independent streaks
     assert.ok(stevenAna.history.every((h) => h.game_id === 'dailysteven'));
 
     assert.equal((await call('/player/beto?game=dailygold'))[0], 404, 'Beto never won Gold');
-    assert.equal((await call('/ranking/all?game=dailyred'))[0], 400);
+    assert.equal((await call('/ranking/all?game=dailymax'))[0], 400, 'unknown ROMs are rejected');
   } finally {
     close();
   }

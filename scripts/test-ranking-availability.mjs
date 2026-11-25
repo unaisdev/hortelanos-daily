@@ -23,7 +23,7 @@ function fixture(t, initialHealth) {
   t.mock.method(globalThis, 'fetch', async (input, options = {}) => {
     const { pathname, search } = new URL(input);
     if (pathname.endsWith('/ranking-config.json')) {
-      return Response.json({ apiUrl: 'https://ranking.test', games: ['dailygold', 'dailysteven'] });
+      return Response.json({ apiUrl: 'https://ranking.test', games: ['dailygold', 'dailysteven', 'dailyred'] });
     }
     calls.push({ pathname, search, method: options.method ?? 'GET' });
     if (pathname === '/health') return health(options);
@@ -39,6 +39,7 @@ function fixture(t, initialHealth) {
 
 const goldOnly = () => Response.json({ ok: true, games: ['dailygold'] });
 const bothGames = () => Response.json({ ok: true, games: ['dailygold', 'dailysteven'] });
+const allGames = () => Response.json({ ok: true, games: ['dailygold', 'dailysteven', 'dailyred'] });
 
 test('Gold keeps its original availability and Steven never reads or posts to a Gold-only Worker', async (t) => {
   const mock = fixture(t, goldOnly);
@@ -46,7 +47,6 @@ test('Gold keeps its original availability and Steven never reads or posts to a 
   assert.equal((await client.fetchRanking('dailygold', date)).ok, true);
   assert.equal((await client.submitWin({ ...win, gameId: 'dailygold' })).ok, true);
   assert.deepEqual(mock.calls.map(({ pathname }) => pathname), ['/ranking', '/win']);
-  assert.equal(await client.rankingEnabled('dailyred'), false);
   const checks = await Promise.all([
     client.rankingEnabled('dailysteven'),
     client.fetchRanking('dailysteven', date),
@@ -87,4 +87,35 @@ test('an unconfirmed or unavailable health response disables only Steven', async
   assert.equal(await client.rankingEnabled('dailysteven'), false);
   assert.equal(await client.rankingEnabled('dailygold'), true);
   assert.deepEqual(mock.calls.map(({ pathname }) => pathname), ['/health', '/health', '/health']);
+});
+
+test('Red stays hidden on a Worker that does not announce it and activates by itself once it does', async (t) => {
+  const mock = fixture(t, bothGames);
+  const client = await mock.load();
+  assert.equal(await client.rankingEnabled('dailygold'), true);
+  const hidden = await Promise.all([
+    client.rankingEnabled('dailyred'),
+    client.fetchRanking('dailyred', date),
+    client.submitWin({ ...win, gameId: 'dailyred' }),
+  ]);
+  assert.equal(hidden[0], false);
+  assert.equal(hidden[1].disabled, true);
+  assert.equal(hidden[2].disabled, true);
+  assert.equal(await client.rankingEnabled('dailysteven'), true, 'Steven is announced, so it is unaffected');
+  assert.deepEqual(mock.calls.map(({ pathname }) => pathname), ['/health'], 'one /health serves every ROM');
+
+  mock.changeHealth(allGames);
+  mock.advance();
+  assert.equal(await client.rankingEnabled('dailyred'), true);
+  assert.equal((await client.fetchRanking('dailyred', date)).ok, true);
+  assert.equal((await client.submitWin({ ...win, gameId: 'dailyred' })).ok, true);
+  assert.match(mock.calls.find(({ pathname }) => pathname === '/ranking').search, /game=dailyred/);
+});
+
+test('an unconfirmed health response disables Red too, but never Gold', async (t) => {
+  const mock = fixture(t, () => Response.json({ ok: false, games: ['dailyred'] }));
+  const client = await mock.load();
+  assert.equal(await client.rankingEnabled('dailyred'), false);
+  assert.equal(await client.rankingEnabled('dailysteven'), false);
+  assert.equal(await client.rankingEnabled('dailygold'), true);
 });
