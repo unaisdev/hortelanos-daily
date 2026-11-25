@@ -75,6 +75,23 @@ export async function installLauncherUpdate() {
   return invoke('install_launcher_update', {}, 10 * 60 * 1000);
 }
 
+/** `{ from, to }` if the previous launcher update's installer left the old version; else null. */
+export async function takeUpdateFailure() {
+  return invoke('take_update_failure', {}, 2000);
+}
+
+/**
+ * Subscribes to the launcher self-update progress emitted by Rust
+ * (`{ phase: 'downloading' | 'installing', version, downloaded, total }`).
+ * Resolves to an unsubscribe function; a no-op outside the desktop shell.
+ */
+export async function onLauncherUpdateProgress(handler) {
+  const listen = window.__TAURI__?.event?.listen;
+  if (typeof listen !== 'function') return () => {};
+  const unlisten = await listen('launcher-update-progress', (event) => handler(event.payload || {}));
+  return typeof unlisten === 'function' ? unlisten : () => {};
+}
+
 export async function checkContentUpdates() {
   return invoke('check_content_updates', {}, 8000);
 }

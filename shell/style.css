@@ -1326,6 +1326,42 @@ body {
   line-height: 1.35;
 }
 
+/* Launcher self-update: bar under the status text (download %, then "installing"). */
+.update-progress {
+  flex: 1 1 100%;
+  order: 5;
+  height: 12px;
+  border: 2px solid #8a6a10;
+  border-radius: 4px;
+  background: rgba(58, 34, 0, 0.18);
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  width: 0;
+  height: 100%;
+  background: #3a2200;
+  transition: width 0.15s linear;
+}
+
+.update-progress[data-indeterminate='1'] .update-progress-fill {
+  width: 35%;
+  transition: none;
+  animation: update-progress-slide 1s ease-in-out infinite alternate;
+}
+
+@keyframes update-progress-slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(185%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-progress[data-indeterminate='1'] .update-progress-fill {
+    animation: none;
+    width: 100%;
+  }
+}
+
 .update-bar[data-launcher-update='1'] {
   color: #1a1200;
   background: rgba(255, 186, 72, 0.95);

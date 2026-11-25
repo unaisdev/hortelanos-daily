@@ -93,7 +93,9 @@ pub async fn install_update(app: &AppHandle) -> AppResult<Option<String>> {
         ))
     })?;
 
-    let result = stage_and_apply(&manifest, &pubkey, &staging, &dir, &exe).await;
+    let mut progress = updates::ProgressReporter::new(app, &remote);
+    progress.chunk(0, None);
+    let result = stage_and_apply(&manifest, &pubkey, &staging, &dir, &exe, &mut progress).await;
     let _ = fs::remove_dir_all(&staging);
     result?;
 
@@ -108,9 +110,13 @@ async fn stage_and_apply(
     staging: &Path,
     dir: &Path,
     exe: &Path,
+    progress: &mut updates::ProgressReporter,
 ) -> AppResult<()> {
     let zip_path = staging.join("update.zip");
-    updates::download_file(&manifest.url, &zip_path).await?;
+    updates::download_file_with_progress(&manifest.url, &zip_path, |len, total| {
+        progress.chunk(len, total)
+    })
+    .await?;
 
     let bytes = fs::read(&zip_path)?;
     verify_signature(pubkey, &bytes, &manifest.signature)?;
@@ -123,6 +129,7 @@ async fn stage_and_apply(
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or_else(|| AppError::msg("nombre de ejecutable no válido"))?;
+    progress.installing().await;
     apply_update(&extracted, dir, exe_name)
 }
 
