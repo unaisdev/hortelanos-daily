@@ -8,6 +8,7 @@ commands.allow = [
   "verify_file_sha256",
   "check_launcher_update",
   "install_launcher_update",
+  "take_update_failure",
   "check_content_updates",
   "install_content_pack",
   "open_external_url",

@@ -36,7 +36,7 @@ fn fit_main_window(window: &WebviewWindow) {
 use crate::error::AppResult;
 use crate::packs::PackStatus;
 use crate::updates::{
-    ContentUpdateInfo, DesktopInfo, InstallResult, LauncherUpdateInfo,
+    ContentUpdateInfo, DesktopInfo, InstallResult, LauncherUpdateInfo, UpdateFailure,
 };
 
 #[tauri::command]
@@ -74,6 +74,13 @@ async fn check_launcher_update(app: AppHandle) -> AppResult<LauncherUpdateInfo> 
 #[tauri::command]
 async fn install_launcher_update(app: AppHandle) -> AppResult<Option<String>> {
     updates::install_launcher_update(&app).await
+}
+
+/// `Some` if the previous launcher update ran its installer but the app is still the old
+/// version (installer failed, was cancelled or blocked). Clears the marker.
+#[tauri::command]
+fn take_update_failure(app: AppHandle) -> AppResult<Option<UpdateFailure>> {
+    updates::take_update_failure(&app)
 }
 
 #[tauri::command]
@@ -119,6 +126,7 @@ pub fn run() {
             verify_file_sha256,
             check_launcher_update,
             install_launcher_update,
+            take_update_failure,
             check_content_updates,
             install_content_pack,
             open_external_url,

@@ -1,10 +1,11 @@
 use std::fs::{self, File};
 use std::io::{copy, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use zip::ZipArchive;
 
 use crate::error::{AppError, AppResult};
@@ -114,6 +115,152 @@ pub async fn check_launcher_update(app: &AppHandle) -> AppResult<LauncherUpdateI
     })
 }
 
+const PROGRESS_EVENT: &str = "launcher-update-progress";
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateProgress {
+    /// "downloading" while bytes arrive, "installing" right before the app restarts.
+    phase: &'static str,
+    version: String,
+    downloaded: u64,
+    total: Option<u64>,
+}
+
+/// Reports launcher-update progress to the UI (event `launcher-update-progress`).
+/// Throttled: one event per 1% when the size is known, per 128 KiB otherwise.
+pub(crate) struct ProgressReporter {
+    app: AppHandle,
+    version: String,
+    downloaded: u64,
+    total: Option<u64>,
+    last_step: Option<u64>,
+}
+
+impl ProgressReporter {
+    pub(crate) fn new(app: &AppHandle, version: &str) -> Self {
+        Self {
+            app: app.clone(),
+            version: version.to_string(),
+            downloaded: 0,
+            total: None,
+            last_step: None,
+        }
+    }
+
+    fn emit(&self, phase: &'static str) {
+        let _ = self.app.emit(
+            PROGRESS_EVENT,
+            UpdateProgress {
+                phase,
+                version: self.version.clone(),
+                downloaded: self.downloaded,
+                total: self.total,
+            },
+        );
+    }
+
+    /// `len` new bytes arrived; `total` is the full size when the server says it.
+    pub(crate) fn chunk(&mut self, len: u64, total: Option<u64>) {
+        self.downloaded += len;
+        if total.is_some() {
+            self.total = total;
+        }
+        let step = match self.total {
+            Some(t) if t > 0 => self.downloaded * 100 / t,
+            _ => self.downloaded / (128 * 1024),
+        };
+        if self.last_step != Some(step) {
+            self.last_step = Some(step);
+            self.emit("downloading");
+        }
+    }
+
+    /// The download is done; the app is about to install and restart. Gives the UI a moment
+    /// to paint it, because on Windows the process exits as soon as the installer starts.
+    pub(crate) async fn installing(&mut self) {
+        if let Some(t) = self.total {
+            self.downloaded = t;
+        }
+        self.emit("installing");
+        tokio::time::sleep(std::time::Duration::from_millis(700)).await;
+    }
+}
+
+const PENDING_UPDATE_FILE: &str = "pending-update.json";
+/// A marker older than this is stale (the player probably never reopened the app).
+const PENDING_UPDATE_MAX_AGE_SECS: u64 = 24 * 60 * 60;
+
+/// Written right before the installer starts. The installer runs after the launcher has
+/// exited, so a failure there can't be shown at that moment: the next start reads this.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+struct PendingUpdate {
+    from: String,
+    to: String,
+    at: u64,
+}
+
+/// An installer run that did not end up replacing the launcher.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateFailure {
+    pub from: String,
+    pub to: String,
+}
+
+fn now_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn pending_update_path(app: &AppHandle) -> AppResult<PathBuf> {
+    Ok(paths::app_data_root(app)?.join(PENDING_UPDATE_FILE))
+}
+
+/// Best effort: a missing marker only means a failed install goes unreported.
+fn mark_update_started(app: &AppHandle, from: &str, to: &str) {
+    let write = || -> AppResult<()> {
+        let path = pending_update_path(app)?;
+        if let Some(dir) = path.parent() {
+            fs::create_dir_all(dir)?;
+        }
+        let marker = PendingUpdate { from: from.into(), to: to.into(), at: now_secs() };
+        fs::write(path, serde_json::to_vec(&marker)?)?;
+        Ok(())
+    };
+    let _ = write();
+}
+
+fn clear_update_marker(app: &AppHandle) {
+    if let Ok(path) = pending_update_path(app) {
+        let _ = fs::remove_file(path);
+    }
+}
+
+/// Did the update recorded in `pending` fail? Unparseable versions never count as a failure.
+fn judge_pending(pending: &PendingUpdate, current: &str, now: u64) -> Option<UpdateFailure> {
+    let current = semver::Version::parse(current.trim_start_matches('v')).ok()?;
+    let target = semver::Version::parse(pending.to.trim_start_matches('v')).ok()?;
+    if current >= target {
+        return None; // it worked (or we are already past it)
+    }
+    if now.saturating_sub(pending.at) > PENDING_UPDATE_MAX_AGE_SECS {
+        return None;
+    }
+    Some(UpdateFailure { from: pending.from.clone(), to: pending.to.clone() })
+}
+
+/// Reads and removes the marker. `Some` when the last launcher update did not complete.
+pub fn take_update_failure(app: &AppHandle) -> AppResult<Option<UpdateFailure>> {
+    let path = pending_update_path(app)?;
+    let Ok(raw) = fs::read(&path) else { return Ok(None) };
+    let _ = fs::remove_file(&path);
+    let Ok(pending) = serde_json::from_slice::<PendingUpdate>(&raw) else { return Ok(None) };
+    Ok(judge_pending(&pending, &app.package_info().version.to_string(), now_secs()))
+}
+
 /// In-place launcher update via tauri-plugin-updater (signed with our own key;
 /// no OS certificate needed). Returns None if already up to date.
 /// On success the app restarts and this call never returns.
@@ -134,10 +281,23 @@ pub async fn install_launcher_update(app: &AppHandle) -> AppResult<Option<String
         return Ok(None);
     };
     let version = update.version.clone();
-    update
-        .download_and_install(|_chunk, _total| {}, || {})
+    let mut progress = ProgressReporter::new(app, &version);
+    progress.chunk(0, None);
+    let bytes = update
+        .download(|chunk, total| progress.chunk(chunk as u64, total), || {})
         .await
-        .map_err(|e| AppError::msg(format!("updater install {version}: {e}")))?;
+        .map_err(|e| AppError::msg(format!("updater download {version}: {e}")))?;
+    progress.installing().await;
+    // Windows: starts the installer (passive: it shows its own progress window) and exits the
+    // process here, so `install` never returns. macOS/Linux: swaps the app in place and
+    // returns, then we restart.
+    let current = app.package_info().version.to_string();
+    mark_update_started(app, &current, &version);
+    if let Err(e) = update.install(bytes) {
+        // The installer could not even start: we are still alive, so report it right now.
+        clear_update_marker(app);
+        return Err(AppError::msg(format!("updater install {version}: {e}")));
+    }
     app.restart()
 }
 
@@ -326,6 +486,15 @@ pub async fn install_content_pack(
 }
 
 pub(crate) async fn download_file(url: &str, dest: &Path) -> AppResult<()> {
+    download_file_with_progress(url, dest, |_, _| {}).await
+}
+
+/// Like `download_file`, calling `on_chunk(bytes_in_chunk, total_size)` as data arrives.
+pub(crate) async fn download_file_with_progress(
+    url: &str,
+    dest: &Path,
+    mut on_chunk: impl FnMut(u64, Option<u64>),
+) -> AppResult<()> {
     let response = client()?.get(url).send().await?;
     if !response.status().is_success() {
         return Err(AppError::msg(format!(
@@ -333,11 +502,13 @@ pub(crate) async fn download_file(url: &str, dest: &Path) -> AppResult<()> {
             response.status()
         )));
     }
+    let total = response.content_length();
     let mut stream = response.bytes_stream();
     let mut file = File::create(dest)?;
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
         file.write_all(&chunk)?;
+        on_chunk(chunk.len() as u64, total);
     }
     file.flush()?;
     Ok(())
@@ -408,4 +579,44 @@ pub struct DesktopInfo {
     pub launcher_version: String,
     pub app_data: String,
     pub platform: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pending(from: &str, to: &str, at: u64) -> PendingUpdate {
+        PendingUpdate { from: from.into(), to: to.into(), at }
+    }
+
+    #[test]
+    fn update_that_took_effect_is_not_a_failure() {
+        let p = pending("2.5.1", "2.5.2", 1000);
+        assert_eq!(judge_pending(&p, "2.5.2", 1100), None);
+        assert_eq!(judge_pending(&p, "v2.6.0", 1100), None, "already past the target");
+    }
+
+    #[test]
+    fn installer_that_left_the_old_version_is_reported() {
+        let p = pending("2.5.1", "2.5.2", 1000);
+        assert_eq!(
+            judge_pending(&p, "2.5.1", 1100),
+            Some(UpdateFailure { from: "2.5.1".into(), to: "2.5.2".into() })
+        );
+    }
+
+    #[test]
+    fn stale_or_garbled_markers_never_nag() {
+        let old = pending("2.5.1", "2.5.2", 1000);
+        assert_eq!(judge_pending(&old, "2.5.1", 1000 + PENDING_UPDATE_MAX_AGE_SECS + 1), None);
+        assert_eq!(judge_pending(&pending("2.5.1", "garbage", 1000), "2.5.1", 1100), None);
+        assert_eq!(judge_pending(&pending("2.5.1", "2.5.2", 1000), "garbage", 1100), None);
+    }
+
+    #[test]
+    fn marker_roundtrips_through_json() {
+        let p = pending("2.5.1", "2.5.2", 42);
+        let back: PendingUpdate = serde_json::from_slice(&serde_json::to_vec(&p).unwrap()).unwrap();
+        assert_eq!(back, p);
+    }
 }

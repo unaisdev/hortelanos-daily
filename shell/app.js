@@ -4,6 +4,8 @@ import {
   listInstalledPacks,
   checkLauncherUpdate,
   installLauncherUpdate,
+  onLauncherUpdateProgress,
+  takeUpdateFailure,
   checkContentUpdates,
   installContentPack,
   getDesktopInfo,
@@ -40,6 +42,9 @@ const updateBar = document.getElementById('update-bar');
 const updateStatus = document.getElementById('update-status');
 const updateBtn = document.getElementById('update-btn');
 const updateLauncherBtn = document.getElementById('update-launcher-btn');
+const updateManualBtn = document.getElementById('update-manual-btn');
+const updateProgress = document.getElementById('update-progress');
+const updateProgressFill = document.getElementById('update-progress-fill');
 const changelogBtn = document.getElementById('changelog-btn');
 const changelogModal = document.getElementById('changelog-modal');
 const changelogModalClose = document.getElementById('changelog-modal-close');
@@ -1000,6 +1005,13 @@ async function installPendingPacks(pending) {
 
 /** On menu open: check Releases, auto-install content packs, keep launcher as UI notice. */
 async function syncUpdatesOnOpen() {
+  // The installer runs after the launcher has exited, so a failed run is only noticed now.
+  let lastFailure = null;
+  try {
+    lastFailure = await takeUpdateFailure();
+  } catch (err) {
+    console.warn('takeUpdateFailure', err);
+  }
   const { pendingContent } = await refreshUpdates();
 
   if (pendingContent.length) {
@@ -1023,7 +1035,84 @@ async function syncUpdatesOnOpen() {
   }
 
   // Packs first (they're quick); then the launcher itself, which restarts the app.
-  if (launcherUpdate?.updateAvailable) await installLauncher();
+  if (!launcherUpdate?.updateAvailable) return;
+  if (lastFailure) {
+    // It already failed once: don't loop installer → failure on every start, let the player choose.
+    showUpdateFailure(
+      `La actualización a la ${lastFailure.to} no se completó: el instalador terminó sin cambiar el launcher (cancelado, bloqueado por el antivirus o con un error).`,
+    );
+    return;
+  }
+  await installLauncher();
+}
+
+/** Plain-Spanish explanation for the errors the self-update can produce. */
+function friendlyUpdateError(err) {
+  const raw = errorText(err);
+  const text = raw.toLowerCase();
+  let why;
+  if (/signature|firma/.test(text)) {
+    why = 'La actualización no ha pasado la comprobación de seguridad, así que no se ha instalado. Prueba más tarde o descárgala a mano.';
+  } else if (/no space|disk full|os error 112|os error 28|espacio/.test(text)) {
+    why = 'No hay espacio libre suficiente en el disco para descargar la actualización.';
+  } else if (/access is denied|permission denied|os error 5\b|os error 13|read-only|solo lectura|no se puede escribir/.test(text)) {
+    why = 'El sistema no deja escribir los archivos de la actualización (permisos o antivirus). Prueba a descargarla a mano.';
+  } else if (/updater install|shellexecute|installer|instalador|blocked|bloquead/.test(text)) {
+    why = 'No se pudo iniciar el instalador de la actualización; puede que lo haya bloqueado el antivirus o Windows.';
+  } else if (/updater check|error sending request|dns|connect|timed out|timeout|network|offline|http 5\d\d|http 404|portable\.json/.test(text)) {
+    why = 'No se pudo comprobar o descargar la actualización. Revisa tu conexión a internet y vuelve a intentarlo.';
+  } else if (/updater download|decode|stream|interrupted|reset/.test(text)) {
+    why = 'La descarga se ha interrumpido antes de terminar.';
+  } else {
+    why = 'No se ha podido completar la actualización.';
+  }
+  return { why, raw };
+}
+
+/** Shows an update failure and offers retry + manual download (never leaves the player stuck). */
+function showUpdateFailure(message) {
+  menuStatus.textContent = message;
+  setUpdateStatus('Actualización del launcher sin completar');
+  if (updateBar) updateBar.hidden = false;
+  if (updateLauncherBtn) {
+    updateLauncherBtn.hidden = false;
+    updateLauncherBtn.textContent = 'Reintentar actualización del launcher';
+  }
+  if (updateManualBtn) updateManualBtn.hidden = false;
+}
+
+/** Paints the self-update bar from the `launcher-update-progress` events sent by Rust. */
+function paintLauncherProgress({ phase, version, downloaded = 0, total = null }) {
+  if (!updateProgress) return;
+  updateProgress.hidden = false;
+  const label = version ? `launcher ${version}` : 'launcher';
+
+  if (phase === 'installing') {
+    updateProgress.dataset.indeterminate = '0';
+    updateProgress.setAttribute('aria-valuenow', '100');
+    if (updateProgressFill) updateProgressFill.style.width = '100%';
+    setUpdateStatus(`Instalando ${label}… la app se reiniciará sola`);
+    return;
+  }
+
+  const known = Number(total) > 0;
+  const pct = known ? Math.min(100, Math.round((downloaded * 100) / total)) : null;
+  updateProgress.dataset.indeterminate = known ? '0' : '1';
+  if (known) {
+    updateProgress.setAttribute('aria-valuenow', String(pct));
+    if (updateProgressFill) updateProgressFill.style.width = `${pct}%`;
+    setUpdateStatus(`Descargando ${label}… ${pct}%`);
+  } else {
+    updateProgress.removeAttribute('aria-valuenow');
+    setUpdateStatus(`Descargando ${label}… ${(downloaded / 1048576).toFixed(1)} MB`);
+  }
+}
+
+function hideLauncherProgress() {
+  if (!updateProgress) return;
+  updateProgress.hidden = true;
+  updateProgress.dataset.indeterminate = '0';
+  if (updateProgressFill) updateProgressFill.style.width = '0';
 }
 
 /** Self-update: download + install + restart. Falls back to the release page if it fails. */
@@ -1033,18 +1122,23 @@ async function installLauncher() {
   if (updateLauncherBtn) updateLauncherBtn.disabled = true;
   setUpdateStatus(`Actualizando launcher a ${launcherUpdate?.latestVersion || 'la última versión'}… no cierres la app`);
   menuStatus.textContent = 'Descargando actualización del launcher…';
+  let stopProgress = () => {};
+  try {
+    stopProgress = await onLauncherUpdateProgress(paintLauncherProgress);
+  } catch (err) {
+    console.warn('onLauncherUpdateProgress', err); // the update still works, just without a bar
+  }
   try {
     const installed = await installLauncherUpdate();
     // On success the app restarts before this line; null means nothing to install.
     if (installed == null) menuStatus.textContent = 'El launcher ya está al día.';
   } catch (err) {
-    console.warn('installLauncherUpdate', err);
-    menuStatus.textContent = `No se pudo actualizar solo (${errorText(err)}). Usa el botón para reintentar o descarga el release.`;
-    setUpdateStatus('Fallo al actualizar el launcher');
-    if (updateLauncherBtn) {
-      updateLauncherBtn.textContent = 'Reintentar actualización del launcher';
-    }
+    const { why, raw } = friendlyUpdateError(err);
+    console.warn('installLauncherUpdate', raw);
+    showUpdateFailure(`${why} Puedes reintentarlo o descargar el instalador a mano.`);
   } finally {
+    stopProgress();
+    hideLauncherProgress();
     updateBusy = false;
     if (updateLauncherBtn) updateLauncherBtn.disabled = false;
   }
@@ -1081,14 +1175,14 @@ async function applyUpdates() {
 }
 
 async function openLauncherRelease() {
-  const url = launcherUpdate?.htmlUrl;
-  if (!url) return;
+  // Falls back to the releases page when the update check itself failed (e.g. offline).
+  const url = launcherUpdate?.htmlUrl || 'https://github.com/unaisdev/hortelanos-daily/releases/latest';
   try {
     await openExternalUrl(url);
   } catch {
     window.open(url, '_blank', 'noopener');
   }
-  menuStatus.textContent = 'Descarga el build de tu SO (unsigned) e instálalo / descomprime el portable.';
+  menuStatus.textContent = 'Se ha abierto la página de descargas: baja el instalador o el ZIP portable de tu sistema.';
 }
 
 function isTypingTarget(el) {
@@ -1158,6 +1252,11 @@ if (updateBtn) {
 if (updateLauncherBtn) {
   updateLauncherBtn.addEventListener('click', () => {
     installLauncher();
+  });
+}
+if (updateManualBtn) {
+  updateManualBtn.addEventListener('click', () => {
+    openLauncherRelease();
   });
 }
 
